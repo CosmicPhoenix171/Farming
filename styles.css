@@ -236,7 +236,7 @@ input[type="checkbox"] { accent-color: var(--green); }
 .crop-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 800px;
+  min-width: 1400px;
 }
 .crop-table th, .crop-table td {
   padding: 11px 14px;
@@ -267,6 +267,10 @@ input[type="checkbox"] { accent-color: var(--green); }
 .crop-table tbody tr.selected { background: var(--green-soft); }
 .crop-table td.num { font-variant-numeric: tabular-nums; }
 .crop-table td.notes { color: var(--muted); font-size: 13px; white-space: normal; max-width: 240px; }
+.crop-table th:last-child,
+.crop-table td.notes {
+  min-width: 240px;
+}
 .crop-table .row-actions { display: flex; gap: 6px; }
 .crop-table .row-actions button {
   padding: 4px 8px; font-size: 12px;
