@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FS25 Crop Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">🌾</span>
+      <div>
+        <h1>FS25 Crop Tracker</h1>
+        <p class="tagline">Compare growth time, yield, straw &amp; 12-month potential</p>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="#dashboard">Dashboard</a>
+      <a href="#table">Crops</a>
+      <a href="#chart">Time vs Yield</a>
+      <a href="#timeline">Timeline</a>
+    </nav>
+    <div class="topbar-actions">
+      <label class="toggle">
+        <input type="checkbox" id="adminToggle" />
+        <span>Edit mode</span>
+      </label>
+    </div>
+  </header>
+
+  <main>
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="section">
+      <h2 class="section-title">Dashboard</h2>
+      <div class="cards" id="dashboardCards"></div>
+    </section>
+
+    <!-- CROP TABLE -->
+    <section id="table" class="section">
+      <div class="section-header">
+        <h2 class="section-title">Crop Database</h2>
+        <div class="admin-actions" id="adminActions" hidden>
+          <button class="btn btn-primary" id="addCropBtn">+ Add Crop</button>
+          <button class="btn" id="exportJsonBtn">Export JSON</button>
+          <button class="btn" id="exportCsvBtn">Export CSV</button>
+          <button class="btn" id="importJsonBtn">Import JSON</button>
+          <button class="btn btn-danger" id="resetBtn">Reset Data</button>
+          <input type="file" id="importFile" accept="application/json" hidden />
+        </div>
+      </div>
+
+      <div class="filters">
+        <div class="filter">
+          <label for="searchInput">Search</label>
+          <input type="search" id="searchInput" placeholder="Crop name..." />
+        </div>
+        <div class="filter">
+          <label for="growthFilter">Growth time</label>
+          <select id="growthFilter">
+            <option value="all">All</option>
+            <option value="fast">Fast (≤ 3 months)</option>
+            <option value="mid">Mid (4-6 months)</option>
+            <option value="long">Long (7+ months)</option>
+          </select>
+        </div>
+        <div class="filter">
+          <label for="typeFilter">Crop type</label>
+          <select id="typeFilter">
+            <option value="all">All types</option>
+          </select>
+        </div>
+        <div class="filter checkbox">
+          <label>
+            <input type="checkbox" id="strawOnly" />
+            Has straw yield
+          </label>
+        </div>
+        <div class="filter checkbox">
+          <label>
+            <input type="checkbox" id="bestYearlyOnly" />
+            Best yearly yield only (top 8)
+          </label>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="crop-table" id="cropTable">
+          <thead>
+            <tr>
+              <th data-sort="crop">Crop</th>
+              <th data-sort="monthsToGrow">Months to Grow</th>
+              <th data-sort="yieldPerSquareAcre">Yield / Acre</th>
+              <th data-sort="acreStrawYield">Straw / Acre</th>
+              <th data-sort="harvestsPerYear">Harvests / 12mo</th>
+              <th data-sort="yearlyYield">12-Mo Yield</th>
+              <th data-sort="yearlyStraw">12-Mo Straw</th>
+              <th>Notes</th>
+              <th class="admin-col" hidden>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="cropTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- CHART -->
+    <section id="chart" class="section">
+      <div class="section-header">
+        <h2 class="section-title">Time vs 12-Month Yield</h2>
+        <div class="chart-controls">
+          <label for="chartSort">Sort</label>
+          <select id="chartSort">
+            <option value="yearlyDesc">12-Mo Yield (high → low)</option>
+            <option value="yearlyAsc">12-Mo Yield (low → high)</option>
+            <option value="months">Months to Grow</option>
+            <option value="name">Crop name</option>
+          </select>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <svg id="yieldChart" role="img" aria-label="Crops by 12-month yield"></svg>
+      </div>
+    </section>
+
+    <!-- TIMELINE -->
+    <section id="timeline" class="section">
+      <h2 class="section-title">Growth Timeline (12 months)</h2>
+      <div class="timeline-legend">
+        <span><i class="sw growing"></i> Growing</span>
+        <span><i class="sw harvest"></i> Harvest ready</span>
+        <span><i class="sw idle"></i> Idle / replant</span>
+      </div>
+      <div class="timeline" id="timeline"></div>
+    </section>
+  </main>
+
+  <!-- DETAIL PANEL -->
+  <aside class="detail-panel" id="detailPanel" hidden aria-hidden="true">
+    <div class="detail-header">
+      <h3 id="detailTitle">Crop</h3>
+      <button class="icon-btn" id="closeDetail" aria-label="Close">✕</button>
+    </div>
+    <div class="detail-body" id="detailBody"></div>
+  </aside>
+  <div class="overlay" id="overlay" hidden></div>
+
+  <!-- EDIT MODAL -->
+  <div class="modal" id="editModal" hidden>
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalTitle">Add Crop</h3>
+        <button class="icon-btn" id="closeModal" aria-label="Close">✕</button>
+      </div>
+      <form id="cropForm" class="form-grid">
+        <input type="hidden" id="f_originalName" />
+        <label>Crop name<input type="text" id="f_crop" required /></label>
+        <label>Months to grow<input type="number" id="f_months" min="1" max="12" step="1" required /></label>
+        <label>Max months (optional, e.g. grass)<input type="number" id="f_maxMonths" min="1" max="12" step="1" /></label>
+        <label>Yield per square acre<input type="number" id="f_yield" min="0" step="1" required /></label>
+        <label>Straw yield per acre (optional)<input type="number" id="f_straw" min="0" step="1" /></label>
+        <label>Type
+          <select id="f_type">
+            <option value="grain">Grain</option>
+            <option value="root">Root</option>
+            <option value="vegetable">Vegetable</option>
+            <option value="fruit">Fruit</option>
+            <option value="forage">Forage</option>
+            <option value="oilseed">Oilseed</option>
+            <option value="fiber">Fiber</option>
+            <option value="tree">Tree</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+        <label class="full">Notes<textarea id="f_notes" rows="2"></textarea></label>
+        <div class="form-actions full">
+          <button type="button" class="btn" id="cancelEdit">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>FS25 Crop Tracker · local data only · designed to expand with prices, profit, seed &amp; fertilizer cost.</p>
+  </footer>
+
+  <script src="js/data.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
