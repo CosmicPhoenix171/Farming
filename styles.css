@@ -23,6 +23,9 @@
 
 * { box-sizing: border-box; }
 
+/* `hidden` must win over flex/grid display rules below */
+[hidden] { display: none !important; }
+
 html, body {
   margin: 0;
   padding: 0;
