@@ -562,22 +562,8 @@
     const fromLeft = Math.random() < 0.5;
     const tornadoYBase = height * (0.84 + Math.random() * 0.08);
     const tornadoStartX = fromLeft ? -140 : width + 140;
-    const tornadoEndX = fromLeft ? width + 140 : -140;
     const swirlDir = fromLeft ? 1 : -1;
-
-    function tornadoPosition(elapsed, tornadoStartsAt, sweepDuration) {
-      if (elapsed <= tornadoStartsAt) {
-        return { x: tornadoStartX, y: tornadoYBase };
-      }
-      const p = Math.min(1, (elapsed - tornadoStartsAt) / sweepDuration);
-      const eased = p < 0.5
-        ? 2 * p * p
-        : 1 - Math.pow(-2 * p + 2, 2) / 2;
-      return {
-        x: tornadoStartX + (tornadoEndX - tornadoStartX) * eased,
-        y: tornadoYBase + Math.sin(elapsed * 0.01) * 10
-      };
-    }
+    let tornadoDirX = fromLeft ? 1 : -1;
 
     const tornado = document.createElement("div");
     tornado.className = "fx-tornado";
@@ -595,34 +581,66 @@
     const tractors = [];
     const bottomPad = 16;
     const span = Math.max(100, width - 80);
+
+    function randomTractorFilter() {
+      const hue = Math.floor(Math.random() * 360);
+      const sat = (1.1 + Math.random() * 1.3).toFixed(2);
+      const bright = (0.9 + Math.random() * 0.45).toFixed(2);
+      return `hue-rotate(${hue}deg) saturate(${sat}) brightness(${bright})`;
+    }
+
     for (let i = 0; i < count; i++) {
       const el = document.createElement("span");
       el.className = "fx-tractor";
       el.textContent = "🚜";
       const size = 18 + Math.random() * 18;
       el.style.fontSize = `${size}px`;
+      el.style.filter = randomTractorFilter();
       layer.appendChild(el);
       const lane = count === 1 ? 0.5 : i / (count - 1);
       const baseX = 40 + lane * span + (Math.random() - 0.5) * 28;
-      const floorY = height - bottomPad - Math.random() * 20;
+      const floorY = height - bottomPad - size - Math.random() * 12;
       tractors.push({
         el,
         x: baseX,
-        y: floorY + 35 + Math.random() * 30,
+        y: floorY + 20 + Math.random() * 16,
         floorY,
+        size,
         vx: (Math.random() - 0.5) * 0.22,
         vy: -(0.08 + Math.random() * 0.22),
-        spin: (Math.random() - 0.5) * 0.12,
-        angle: Math.random() * 360,
+        role: Math.random() < 0.22
+          ? "far"
+          : Math.random() < 0.5
+            ? "trapped"
+            : Math.random() < 0.75
+              ? "ahead"
+              : "normal",
+        burstDone: false,
+        inHitFrames: 0,
+        coreDetectedAt: null,
         bornLag: Math.random() * 420
       });
     }
 
     const start = performance.now();
     const tornadoStartsAt = 1400;
-    const sweepDuration = 9000;
-    const totalMs = 12000;
-    const hitRadius = 185;
+    const minRunMs = 11000 + Math.random() * 10000;
+    const maxRunMs = minRunMs + 24000;
+    const hitHalfSize = 185;
+    const gravity = 0.012;
+    const tornadoSpeed = 0.7 + Math.random() * 0.55;
+    const tornadoEdgePad = 170;
+    const yBobAmp = 9;
+    let tornadoX = tornadoStartX;
+    let tornadoY = tornadoYBase;
+    let nextFlipAt = tornadoStartsAt + 1800 + Math.random() * 2800;
+    let ending = false;
+    let endingStartedAt = 0;
+    const fadeOutMs = 1000;
+
+    function isTractorOnScreen(t) {
+      return t.x > -80 && t.x < width + 80 && t.y > -80 && t.y < height + 80;
+    }
 
     function frame(now) {
       const elapsed = now - start;
@@ -630,12 +648,33 @@
       if (elapsed > tornadoStartsAt) {
         tornado.classList.add("active");
         hitbox.classList.add("active");
+
+        if (!ending) {
+          tornadoX += tornadoDirX * tornadoSpeed * dt * 2.1;
+          tornadoY = tornadoYBase + Math.sin(elapsed * 0.0075) * yBobAmp;
+
+          if (tornadoX < -tornadoEdgePad) {
+            tornadoX = -tornadoEdgePad;
+            tornadoDirX = 1;
+          } else if (tornadoX > width + tornadoEdgePad) {
+            tornadoX = width + tornadoEdgePad;
+            tornadoDirX = -1;
+          }
+
+          if (elapsed >= nextFlipAt) {
+            if (Math.random() < 0.55) tornadoDirX *= -1;
+            nextFlipAt = elapsed + 1700 + Math.random() * 3000;
+          }
+        }
       }
-      const center = tornadoPosition(elapsed, tornadoStartsAt, sweepDuration);
+
+      const center = { x: tornadoX, y: tornadoY };
       tornado.style.left = `${center.x}px`;
       tornado.style.top = `${center.y}px`;
       hitbox.style.left = `${center.x}px`;
       hitbox.style.top = `${center.y}px`;
+
+      let tractorsOnScreen = 0;
 
       for (const t of tractors) {
         if (elapsed < t.bornLag) continue;
@@ -649,53 +688,159 @@
         } else {
           const dx = center.x - t.x;
           const dy = center.y - t.y;
-          const dist = Math.max(12, Math.hypot(dx, dy));
-          const nx = dx / dist;
-          const ny = dy / dist;
+          const absDx = Math.abs(dx);
+          const absDy = Math.abs(dy);
+          const inSquareHitbox = absDx <= hitHalfSize && absDy <= hitHalfSize;
 
-          if (dist <= hitRadius) {
-            const influence = 1 - dist / hitRadius;
-            // Pull inward while adding tangential swirl only inside the hitbox.
-            const pull = 0.085 * influence;
-            const swirl = 0.13 * influence;
+          if (inSquareHitbox) {
+            t.inHitFrames += 1;
+            const dist = Math.max(12, Math.hypot(dx, dy));
+            const nx = dx / dist;
+            const ny = dy / dist;
+            const edgeFactor = Math.max(absDx, absDy) / hitHalfSize;
+            const influence = 1 - edgeFactor;
+            const trailingBehind = dx * tornadoDirX > 0;
+            // Base pull/swirl only inside square hitbox.
+            let pull = 0.08 * influence;
+            let swirl = 0.12 * influence;
+            let chaos = 0.02 * influence;
+            let forwardKick = 0;
+
+            // Chaotic behavior profiles.
+            if (t.role === "far") {
+              pull *= 0.8;
+              swirl *= 1.7;
+              chaos *= 1.7;
+              if (!t.burstDone && influence > 0.45) {
+                // One strong launch can fling some tractors far away.
+                t.vx += tornadoDirX * (0.7 + Math.random() * 0.8);
+                t.vy -= 0.35 + Math.random() * 0.45;
+                t.burstDone = true;
+              }
+            } else if (t.role === "trapped") {
+              // Keep some tractors locked near the tornado core.
+              pull *= 1.9;
+              swirl *= 0.8;
+              chaos *= 0.5;
+              if (dist < 70) {
+                t.vx *= 0.86;
+                t.vy *= 0.86;
+              }
+            } else if (t.role === "ahead") {
+              // Throw some tractors in front of tornado travel.
+              pull *= 0.9;
+              swirl *= 1.05;
+              chaos *= 1.1;
+              forwardKick = (0.05 + Math.random() * 0.07) * influence;
+            }
+
+            // If trailing behind too long, eject forward to avoid a chained look.
+            if (trailingBehind) {
+              pull *= 0.72;
+              swirl *= 0.9;
+              t.vx += tornadoDirX * (0.02 + 0.06 * influence);
+              if (t.inHitFrames > 20) {
+                t.vx += tornadoDirX * (0.42 + Math.random() * 0.34);
+                t.vy -= 0.08 + Math.random() * 0.2;
+                t.inHitFrames = 0;
+              }
+            }
+
+            // Core ejection: if detected in center, eject after 1 second.
+            if (dist < 56) {
+              if (t.coreDetectedAt == null) {
+                t.coreDetectedAt = elapsed;
+              }
+            } else {
+              t.coreDetectedAt = null;
+            }
+
+            if (t.coreDetectedAt != null && elapsed - t.coreDetectedAt >= 1000) {
+              const eject = 1.25 + Math.random() * 1.05;
+              t.vx += (-nx) * eject + tornadoDirX * 0.42;
+              t.vy += (-ny) * eject - (0.32 + Math.random() * 0.34);
+              t.inHitFrames = 0;
+              t.coreDetectedAt = null;
+            }
+
             t.vx += nx * pull + (-ny) * swirl * swirlDir;
             t.vy += ny * pull + nx * swirl * swirlDir;
+            t.vx += tornadoDirX * forwardKick;
 
-            // Small kick for storm turbulence only while inside hitbox.
-            t.vx += (Math.random() - 0.5) * 0.026 * influence;
-            t.vy += (Math.random() - 0.5) * 0.026 * influence;
+            // Storm turbulence while inside hitbox.
+            t.vx += (Math.random() - 0.5) * chaos;
+            t.vy += (Math.random() - 0.5) * chaos;
 
-            t.vx *= 0.978;
-            t.vy *= 0.978;
+            const damp = t.role === "trapped" ? 0.965 : 0.976;
+            t.vx *= damp;
+            t.vy *= damp;
           } else {
-            // Outside hitbox: no tornado force, just settle near the bottom.
-            t.vx *= 0.92;
-            t.vy += (t.floorY - t.y) * 0.03;
-            t.vy *= 0.84;
+            t.inHitFrames = 0;
+            t.coreDetectedAt = null;
+            // Outside hitbox: keep momentum while airborne, settle only near ground.
+            const airborne = t.y < t.floorY - 4 || t.vy < -0.02;
+            if (airborne) {
+              t.vy += gravity;
+              t.vx *= 0.992;
+              t.vy *= 0.998;
+            } else {
+              t.vx *= 0.9;
+              t.vy += (t.floorY - t.y) * 0.06;
+              t.vy *= 0.7;
+            }
           }
         }
 
         t.x += t.vx * dt * 2.35;
         t.y += t.vy * dt * 2.35;
-        t.angle += t.spin * dt * 28;
+        const maxY = height - bottomPad - t.size;
+        if (t.y > maxY) {
+          t.y = maxY;
+          if (Math.abs(t.vy) > 0.12) {
+            // Small bounce so landing feels physical rather than hard-clamped.
+            t.vy = -Math.abs(t.vy) * 0.35;
+            t.vx *= 0.96;
+          } else {
+            t.vy = 0;
+          }
+        }
+        if (isTractorOnScreen(t)) tractorsOnScreen += 1;
 
-        const fade = 1 - Math.max(0, elapsed - (totalMs - 1100)) / 1100;
-        t.el.style.opacity = String(Math.max(0, Math.min(1, fade)));
-        t.el.style.transform = `translate(${t.x}px, ${t.y}px) rotate(${t.angle}deg)`;
+        let tractorOpacity = 1;
+        if (ending) {
+          const p = Math.min(1, (elapsed - endingStartedAt) / fadeOutMs);
+          tractorOpacity = 1 - p;
+        }
+        t.el.style.opacity = String(Math.max(0, Math.min(1, tractorOpacity)));
+        t.el.style.transform = `translate(${t.x}px, ${t.y}px)`;
       }
 
-      if (elapsed < totalMs) {
+      if (!ending && elapsed > minRunMs && tractorsOnScreen === 0) {
+        ending = true;
+        endingStartedAt = elapsed;
+      }
+      if (!ending && elapsed > maxRunMs) {
+        ending = true;
+        endingStartedAt = elapsed;
+      }
+
+      let tornadoOpacity = 1;
+      if (ending) {
+        const p = Math.min(1, (elapsed - endingStartedAt) / fadeOutMs);
+        tornadoOpacity = 1 - p;
+      }
+      tornado.style.opacity = String(Math.max(0, Math.min(1, tornadoOpacity)));
+      hitbox.style.opacity = "0";
+
+      if (!ending || elapsed - endingStartedAt < fadeOutMs) {
         fxRafId = requestAnimationFrame(frame);
+      } else {
+        layer.innerHTML = "";
+        fxRafId = null;
       }
     }
 
     fxRafId = requestAnimationFrame(frame);
-    fxStopTimer = setTimeout(() => {
-      if (fxRafId) cancelAnimationFrame(fxRafId);
-      fxRafId = null;
-      layer.innerHTML = "";
-      fxStopTimer = null;
-    }, totalMs + 120);
   }
 
   // ---------- Escaping ----------

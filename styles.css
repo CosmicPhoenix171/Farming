@@ -469,12 +469,12 @@ input[type="checkbox"] { accent-color: var(--green); }
 }
 .fx-tornado {
   position: absolute;
-  width: 160px;
-  height: 210px;
-  border-radius: 18% 35% 22% 30%;
+  width: 760px;
+  height: 880px;
+  border-radius: 10% 10% 35% 35%;
   background:
     linear-gradient(180deg, rgba(205, 214, 198, 0.18), rgba(120, 128, 118, 0.22));
-  clip-path: polygon(32% 0%, 80% 3%, 66% 20%, 58% 38%, 53% 56%, 47% 75%, 41% 89%, 34% 100%, 26% 100%, 20% 88%, 16% 72%, 14% 54%, 17% 36%, 23% 18%);
+  clip-path: polygon(8% 0%, 92% 0%, 76% 14%, 66% 28%, 58% 44%, 54% 60%, 52% 76%, 50% 100%, 48% 76%, 46% 60%, 42% 44%, 34% 28%, 24% 14%);
   filter: blur(0.8px) saturate(0.82);
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.72) skewX(-13deg);
