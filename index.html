@@ -16,38 +16,22 @@
       </div>
     </div>
     <nav class="nav">
-      <a href="#dashboard">Dashboard</a>
       <a href="#table">Crops</a>
       <a href="#chart">Time vs Yield</a>
       <a href="#timeline">Timeline</a>
     </nav>
     <div class="topbar-actions">
       <span id="syncStatus" class="sync-status" title="Data sync status">Local only</span>
-      <label class="toggle">
-        <input type="checkbox" id="adminToggle" />
-        <span>Edit mode</span>
-      </label>
     </div>
   </header>
 
   <main>
-    <!-- DASHBOARD -->
-    <section id="dashboard" class="section">
-      <h2 class="section-title">Dashboard</h2>
-      <div class="cards" id="dashboardCards"></div>
-    </section>
-
     <!-- CROP TABLE -->
     <section id="table" class="section">
       <div class="section-header">
         <h2 class="section-title">Crop Database</h2>
-        <div class="admin-actions" id="adminActions" hidden>
+        <div class="admin-actions" id="adminActions">
           <button class="btn btn-primary" id="addCropBtn">+ Add Crop</button>
-          <button class="btn" id="exportJsonBtn">Export JSON</button>
-          <button class="btn" id="exportCsvBtn">Export CSV</button>
-          <button class="btn" id="importJsonBtn">Import JSON</button>
-          <button class="btn btn-danger" id="resetBtn">Reset Data</button>
-          <input type="file" id="importFile" accept="application/json" hidden />
         </div>
       </div>
 
@@ -100,7 +84,6 @@
               <th data-sort="highSellPrice">High Sell / 1,000u</th>
               <th data-sort="pricePointCategory">Price Point</th>
               <th>Notes</th>
-              <th class="admin-col" hidden>Actions</th>
             </tr>
           </thead>
           <tbody id="cropTableBody"></tbody>
@@ -139,14 +122,6 @@
     </section>
   </main>
 
-  <!-- DETAIL PANEL -->
-  <aside class="detail-panel" id="detailPanel" hidden aria-hidden="true">
-    <div class="detail-header">
-      <h3 id="detailTitle">Crop</h3>
-      <button class="icon-btn" id="closeDetail" aria-label="Close">✕</button>
-    </div>
-    <div class="detail-body" id="detailBody"></div>
-  </aside>
   <div class="overlay" id="overlay" hidden></div>
 
   <!-- EDIT MODAL -->

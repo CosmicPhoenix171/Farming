@@ -14,7 +14,6 @@
       bestYearlyOnly: false
     },
     chartSort: "yearlyDesc",
-    adminMode: false,
     selectedCrop: null
   };
 
@@ -131,7 +130,6 @@
   }
 
   function renderAll() {
-    renderDashboard();
     renderTable();
     renderChart();
     renderTimeline();
@@ -163,40 +161,20 @@
     // Chart sort
     $("#chartSort").addEventListener("change", e => { state.chartSort = e.target.value; renderChart(); });
 
-    // Admin toggle
-    $("#adminToggle").addEventListener("change", e => {
-      state.adminMode = e.target.checked;
-      $("#adminActions").hidden = !state.adminMode;
-      $$(".admin-col").forEach(el => el.hidden = !state.adminMode);
-      renderTable();
-    });
-
-    // Admin actions
+    // Actions
     $("#addCropBtn").addEventListener("click", () => openModal(null));
-    $("#exportJsonBtn").addEventListener("click", () => window.CropStore.exportJson(state.crops));
-    $("#exportCsvBtn").addEventListener("click", () => window.CropStore.exportCsv(state.crops));
-    $("#importJsonBtn").addEventListener("click", () => $("#importFile").click());
-    $("#importFile").addEventListener("change", onImportFile);
-    $("#resetBtn").addEventListener("click", () => {
-      if (confirm("Reset all crop data to defaults? This cannot be undone.")) {
-        state.crops = window.CropStore.reset();
-        persistCrops();
-        renderAll();
-      }
-    });
 
     // Modal
     $("#closeModal").addEventListener("click", closeModal);
     $("#cancelEdit").addEventListener("click", closeModal);
     $("#cropForm").addEventListener("submit", onSubmitForm);
 
-    // Detail panel
-    $("#closeDetail").addEventListener("click", closeDetail);
-    $("#overlay").addEventListener("click", () => { closeDetail(); closeModal(); });
+    // Overlay
+    $("#overlay").addEventListener("click", () => { closeModal(); });
 
     // Esc key
     document.addEventListener("keydown", e => {
-      if (e.key === "Escape") { closeDetail(); closeModal(); }
+      if (e.key === "Escape") { closeModal(); }
     });
   }
 
@@ -338,22 +316,13 @@
     });
 
     if (!list.length) {
-      tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:24px">No crops match your filters.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:24px">No crops match your filters.</td></tr>`;
       return;
     }
 
     tbody.innerHTML = list.map(c => {
-      const sel = state.selectedCrop === c.crop ? " selected" : "";
-      const adminCell = state.adminMode
-        ? `<td class="admin-col">
-             <div class="row-actions">
-               <button class="btn" data-action="edit" data-crop="${escapeAttr(c.crop)}">Edit</button>
-               <button class="btn btn-danger" data-action="delete" data-crop="${escapeAttr(c.crop)}">Del</button>
-             </div>
-           </td>`
-        : "";
       return `
-        <tr class="${sel}" data-crop="${escapeAttr(c.crop)}">
+        <tr data-crop="${escapeAttr(c.crop)}">
           <td>${escapeHtml(c.crop)}${c.acreStrawYield ? '<span class="tag yellow">straw</span>' : ""}</td>
           <td class="num">${monthsLabel(c)}</td>
           <td class="num">${fmt(c.yieldPerSquareAcre)}</td>
@@ -365,27 +334,13 @@
           <td class="num">${fmt(c.highSellPrice)}</td>
           <td>${pricePointCategory(c)}</td>
           <td class="notes">${escapeHtml(c.notes || "")}</td>
-          ${adminCell}
         </tr>
       `;
     }).join("");
 
-    // row click → detail
+    // row click → edit
     tbody.querySelectorAll("tr[data-crop]").forEach(tr => {
-      tr.addEventListener("click", e => {
-        if (e.target.closest("button")) return;
-        openDetail(tr.dataset.crop);
-      });
-    });
-    // admin buttons
-    tbody.querySelectorAll("button[data-action]").forEach(b => {
-      b.addEventListener("click", e => {
-        e.stopPropagation();
-        const action = b.dataset.action;
-        const name = b.dataset.crop;
-        if (action === "edit") openModal(name);
-        if (action === "delete") deleteCrop(name);
-      });
+      tr.addEventListener("click", () => openModal(tr.dataset.crop));
     });
   }
 
@@ -510,41 +465,6 @@
     });
   }
 
-  // ---------- Detail panel ----------
-  function openDetail(name) {
-    const c = state.crops.find(x => x.crop === name);
-    if (!c) return;
-    state.selectedCrop = name;
-    $("#detailTitle").textContent = c.crop;
-    $("#detailBody").innerHTML = `
-      <div class="stat"><span class="k">Type</span><span class="v">${escapeHtml(c.type || "—")}</span></div>
-      <div class="stat"><span class="k">Months to grow</span><span class="v">${monthsLabel(c)}</span></div>
-      <div class="stat"><span class="k">Yield / acre</span><span class="v">${fmt(c.yieldPerSquareAcre)}</span></div>
-      <div class="stat"><span class="k">Straw / acre</span><span class="v">${fmt(c.acreStrawYield)}</span></div>
-      <div class="stat"><span class="k">Harvests / 12 mo</span><span class="v">${harvestsLabel(c)}</span></div>
-      <div class="stat"><span class="k">12-month yield</span><span class="v">${yearlyYieldLabel(c)}</span></div>
-      <div class="stat"><span class="k">12-month straw</span><span class="v">${yearlyStrawLabel(c)}</span></div>
-      <div class="stat"><span class="k">Low sell price (per 1,000u)</span><span class="v">${fmt(c.lowSellPrice)}</span></div>
-      <div class="stat"><span class="k">High sell price (per 1,000u)</span><span class="v">${fmt(c.highSellPrice)}</span></div>
-      <div class="stat"><span class="k">Price point category</span><span class="v">${pricePointCategory(c)}</span></div>
-      <div class="stat"><span class="k">Yield / month efficiency</span><span class="v">${fmt(Math.round(efficiency(c)))}</span></div>
-      <div class="use-case"><strong>Suggested use:</strong> ${escapeHtml(useCase(c))}</div>
-      ${c.notes ? `<div class="notes-box"><strong>Notes:</strong> ${escapeHtml(c.notes)}</div>` : ""}
-    `;
-    $("#detailPanel").hidden = false;
-    requestAnimationFrame(() => $("#detailPanel").setAttribute("data-open", "true"));
-    $("#overlay").hidden = false;
-    renderTable();
-  }
-
-  function closeDetail() {
-    state.selectedCrop = null;
-    $("#detailPanel").setAttribute("data-open", "false");
-    $("#overlay").hidden = true;
-    setTimeout(() => { $("#detailPanel").hidden = true; }, 200);
-    renderTable();
-  }
-
   // ---------- Modal (add/edit) ----------
   function openModal(name) {
     const isEdit = !!name;
@@ -567,7 +487,7 @@
 
   function closeModal() {
     $("#editModal").hidden = true;
-    if ($("#detailPanel").hidden) $("#overlay").hidden = true;
+    $("#overlay").hidden = true;
   }
 
   function onSubmitForm(e) {
@@ -600,27 +520,6 @@
     populateTypeFilter();
     closeModal();
     renderAll();
-  }
-
-  function deleteCrop(name) {
-    if (!confirm(`Delete "${name}"?`)) return;
-    state.crops = state.crops.filter(c => c.crop !== name);
-    persistCrops();
-    if (state.selectedCrop === name) closeDetail();
-    renderAll();
-  }
-
-  function onImportFile(e) {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    window.CropStore.importJsonFile(file).then(data => {
-      if (!confirm(`Import ${data.length} crops? This replaces current data.`)) return;
-      state.crops = data;
-      persistCrops();
-      populateTypeFilter();
-      renderAll();
-    }).catch(err => alert("Import failed: " + err.message));
-    e.target.value = "";
   }
 
   // ---------- Escaping ----------
