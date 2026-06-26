@@ -17,6 +17,7 @@
       bestYearlyOnly: false
     },
     livePriceEntries: [],
+    lastLivePriceUpdateMs: 0,
     chartSort: "yearlyDesc",
     selectedCrop: null
   };
@@ -102,7 +103,7 @@
     return null;
   }
 
-  function applyLivePrices(entries) {
+  function applyLivePrices(entries, liveUpdatedAtMs = 0) {
     if (!Array.isArray(entries) || !entries.length) return;
 
     const byKey = new Map();
@@ -135,15 +136,20 @@
 
       if (low == null && high == null && avg == null) continue;
 
-      if (low != null) state.crops[idx].lowSellPrice = Math.round(low);
-      if (high != null) state.crops[idx].highSellPrice = Math.round(high);
+      const crop = state.crops[idx];
+      if (crop.manualPriceOverrideAt && crop.manualPriceOverrideAt > liveUpdatedAtMs) {
+        continue;
+      }
+
+      if (low != null) crop.lowSellPrice = Math.round(low);
+      if (high != null) crop.highSellPrice = Math.round(high);
       if (low == null && high == null && avg != null) {
-        state.crops[idx].lowSellPrice = Math.round(avg);
-        state.crops[idx].highSellPrice = Math.round(avg);
+        crop.lowSellPrice = Math.round(avg);
+        crop.highSellPrice = Math.round(avg);
       } else if (low != null && high == null) {
-        state.crops[idx].highSellPrice = Math.round(low);
+        crop.highSellPrice = Math.round(low);
       } else if (high != null && low == null) {
-        state.crops[idx].lowSellPrice = Math.round(high);
+        crop.lowSellPrice = Math.round(high);
       }
     }
   }
@@ -179,7 +185,7 @@
     window.FirebaseSync.subscribeCrops(async (cloud) => {
       if (Array.isArray(cloud) && cloud.length) {
         state.crops = cloud.map(window.CropStore.normalize);
-        applyLivePrices(state.livePriceEntries);
+        applyLivePrices(state.livePriceEntries, state.lastLivePriceUpdateMs);
         window.CropStore.save(state.crops);
         populateTypeFilter();
         renderAll();
@@ -192,9 +198,10 @@
       }
     });
 
-    window.FirebaseSync.subscribeLivePrices((entries) => {
-      state.livePriceEntries = Array.isArray(entries) ? entries : [];
-      applyLivePrices(state.livePriceEntries);
+    window.FirebaseSync.subscribeLivePrices((payload) => {
+      state.livePriceEntries = Array.isArray(payload && payload.entries) ? payload.entries : [];
+      state.lastLivePriceUpdateMs = Number(payload && payload.updatedAtMs) || Date.now();
+      applyLivePrices(state.livePriceEntries, state.lastLivePriceUpdateMs);
       renderAll();
     });
   }
@@ -592,11 +599,22 @@
     if (!newCrop.crop) return;
     if (original) {
       const idx = state.crops.findIndex(x => x.crop === original);
-      if (idx >= 0) state.crops[idx] = newCrop;
+      if (idx >= 0) {
+        const prev = state.crops[idx];
+        if (prev.lowSellPrice !== newCrop.lowSellPrice || prev.highSellPrice !== newCrop.highSellPrice) {
+          newCrop.manualPriceOverrideAt = Date.now();
+        } else {
+          newCrop.manualPriceOverrideAt = prev.manualPriceOverrideAt ?? null;
+        }
+        state.crops[idx] = newCrop;
+      }
     } else {
       if (state.crops.some(x => x.crop.toLowerCase() === newCrop.crop.toLowerCase())) {
         alert("A crop with that name already exists.");
         return;
+      }
+      if (newCrop.lowSellPrice != null || newCrop.highSellPrice != null) {
+        newCrop.manualPriceOverrideAt = Date.now();
       }
       state.crops.push(newCrop);
     }

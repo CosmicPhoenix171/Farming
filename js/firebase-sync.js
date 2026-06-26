@@ -156,13 +156,14 @@
 
       const handler = (snap) => {
         if (!snap.exists()) {
-          onChange([]);
+          onChange({ entries: [], updatedAtMs: Date.now() });
           return;
         }
         const value = snap.val();
         const entries = toEntries(value);
+        const updatedAtMs = Number(value && value.updatedAtMs) || Date.now();
         setStatus("Live prices synced", "ok");
-        onChange(entries);
+        onChange({ entries, updatedAtMs });
       };
       const errorHandler = (e) => {
         console.warn("[fs25] live prices subscribe failed:", e);
