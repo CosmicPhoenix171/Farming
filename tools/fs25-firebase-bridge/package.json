@@ -1,0 +1,15 @@
+{
+  "name": "fs25-firebase-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PC-only FS25 server price bridge to Firebase Realtime Database",
+  "main": "bridge.js",
+  "scripts": {
+    "start": "node bridge.js"
+  },
+  "dependencies": {
+    "chokidar": "^4.0.1",
+    "dotenv": "^16.4.5",
+    "firebase-admin": "^12.6.0"
+  }
+}

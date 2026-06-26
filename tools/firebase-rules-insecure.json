@@ -1,0 +1,15 @@
+{
+  "rules": {
+    ".read": true,
+    "fs25": {
+      "livePrices": {
+        ".write": true
+      }
+    },
+    "powerstarCropTrackerFS25": {
+      "crops": {
+        ".write": true
+      }
+    }
+  }
+}

@@ -16,6 +16,7 @@
       strawOnly: false,
       bestYearlyOnly: false
     },
+    livePriceEntries: [],
     chartSort: "yearlyDesc",
     selectedCrop: null
   };
@@ -91,6 +92,65 @@
     return fmt(yearlyStraw(c));
   }
 
+  function normalizeKey(v) {
+    return String(v || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  }
+
+  function readNumber(...values) {
+    for (const v of values) {
+      if (v == null || v === "") continue;
+      const n = Number(v);
+      if (!Number.isNaN(n) && Number.isFinite(n)) return n;
+    }
+    return null;
+  }
+
+  function applyLivePrices(entries) {
+    if (!Array.isArray(entries) || !entries.length) return;
+
+    const byKey = new Map();
+    state.crops.forEach((c, i) => byKey.set(normalizeKey(c.crop), i));
+
+    const cropAliases = {
+      greenbeans: "greenbean",
+      redbeet: "redbeets",
+      redbeets: "redbeets",
+      sugaret: "sugarbeet",
+      sugarbeets: "sugarbeet",
+      longgrainrice: "ricelonggrain"
+    };
+
+    for (const e of entries) {
+      const nameRaw = e.crop || e.fillTypeName || e.name || e.title || e.product || e.id;
+      const keyRaw = normalizeKey(nameRaw);
+      if (!keyRaw) continue;
+      const key = cropAliases[keyRaw] || keyRaw;
+
+      let idx = byKey.get(key);
+      if (idx == null) {
+        idx = state.crops.findIndex(c => key.includes(normalizeKey(c.crop)) || normalizeKey(c.crop).includes(key));
+      }
+      if (idx == null || idx < 0) continue;
+
+      const low = readNumber(e.lowSellPrice, e.lowPrice, e.minPrice);
+      const high = readNumber(e.highSellPrice, e.highPrice, e.maxPrice);
+      const avg = readNumber(e.avgPrice, e.price, e.currentPrice);
+
+      if (low == null && high == null && avg == null) continue;
+
+      if (low != null) state.crops[idx].lowSellPrice = Math.round(low);
+      if (high != null) state.crops[idx].highSellPrice = Math.round(high);
+      if (low == null && high == null && avg != null) {
+        state.crops[idx].lowSellPrice = Math.round(avg);
+        state.crops[idx].highSellPrice = Math.round(avg);
+      } else if (low != null && high == null) {
+        state.crops[idx].highSellPrice = Math.round(low);
+      } else if (high != null && low == null) {
+        state.crops[idx].lowSellPrice = Math.round(high);
+      }
+    }
+  }
+
   function useCase(c) {
     const m = c.monthsToGrow;
     const yy = yearlyYield(c);
@@ -122,6 +182,7 @@
     window.FirebaseSync.subscribeCrops(async (cloud) => {
       if (Array.isArray(cloud) && cloud.length) {
         state.crops = cloud.map(window.CropStore.normalize);
+        applyLivePrices(state.livePriceEntries);
         window.CropStore.save(state.crops);
         populateTypeFilter();
         renderAll();
@@ -132,6 +193,12 @@
         hasSeededCloud = true;
         await window.FirebaseSync.saveCrops(state.crops);
       }
+    });
+
+    window.FirebaseSync.subscribeLivePrices((entries) => {
+      state.livePriceEntries = Array.isArray(entries) ? entries : [];
+      applyLivePrices(state.livePriceEntries);
+      renderAll();
     });
   }
 

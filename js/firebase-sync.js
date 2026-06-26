@@ -15,6 +15,7 @@
   };
 
   const DB_PATH = "powerstarCropTrackerFS25/crops";
+  const LIVE_PRICES_PATH = "fs25/livePrices";
 
   function canUseFirebase() {
     return typeof window !== "undefined" && window.firebase && window.firebase.database;
@@ -57,6 +58,8 @@
     _db: null,
     _ref: null,
     _unsubscribe: null,
+    _liveRef: null,
+    _unsubscribeLive: null,
     ready: Promise.resolve(),
 
     async loadCrops() {
@@ -124,6 +127,51 @@
       ref.on("value", handler, errorHandler);
       this._unsubscribe = () => ref.off("value", handler);
       return this._unsubscribe;
+    },
+
+    subscribeLivePrices(onChange) {
+      if (!this._db || typeof onChange !== "function") return () => {};
+      if (this._unsubscribeLive) this._unsubscribeLive();
+
+      const ref = this._db.ref(LIVE_PRICES_PATH);
+      this._liveRef = ref;
+
+      const toEntries = (value) => {
+        if (!value) return [];
+        if (Array.isArray(value)) return value;
+        if (Array.isArray(value.entries)) return value.entries;
+        if (Array.isArray(value.prices)) return value.prices;
+        if (Array.isArray(value.items)) return value.items;
+        if (value.byCrop && typeof value.byCrop === "object") {
+          return Object.entries(value.byCrop).map(([crop, v]) => ({ crop, ...(v || {}) }));
+        }
+        // Support map-like payloads keyed by crop name.
+        if (typeof value === "object") {
+          const metaKeys = new Set(["updatedAt", "updatedAtMs", "source", "entries", "prices", "items", "byCrop"]);
+          const keys = Object.keys(value).filter(k => !metaKeys.has(k));
+          if (keys.length) return keys.map(k => ({ crop: k, ...(value[k] || {}) }));
+        }
+        return [];
+      };
+
+      const handler = (snap) => {
+        if (!snap.exists()) {
+          onChange([]);
+          return;
+        }
+        const value = snap.val();
+        const entries = toEntries(value);
+        setStatus("Live prices synced", "ok");
+        onChange(entries);
+      };
+      const errorHandler = (e) => {
+        console.warn("[fs25] live prices subscribe failed:", e);
+        setStatus("Price sync failed", "err");
+      };
+
+      ref.on("value", handler, errorHandler);
+      this._unsubscribeLive = () => ref.off("value", handler);
+      return this._unsubscribeLive;
     }
   };
 
