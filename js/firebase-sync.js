@@ -33,6 +33,20 @@
     if (kind) el.classList.add(kind);
   }
 
+  function stripUndefinedDeep(value) {
+    if (Array.isArray(value)) {
+      return value.map(stripUndefinedDeep);
+    }
+    if (value && typeof value === "object") {
+      const out = {};
+      for (const [k, v] of Object.entries(value)) {
+        if (v !== undefined) out[k] = stripUndefinedDeep(v);
+      }
+      return out;
+    }
+    return value;
+  }
+
   async function init() {
     if (!canUseFirebase()) {
       setStatus("Local only", "warn");
@@ -88,7 +102,8 @@
     async saveCrops(crops) {
       if (!this._db) return false;
       try {
-        await this._db.ref(DB_PATH).set(crops);
+        const sanitized = stripUndefinedDeep(crops);
+        await this._db.ref(DB_PATH).set(sanitized);
         setStatus("Cloud synced", "ok");
         return true;
       } catch (e) {

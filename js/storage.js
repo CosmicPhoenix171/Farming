@@ -35,10 +35,9 @@
   }
 
   function normalize(c) {
-    return {
+    const normalized = {
       crop: String(c.crop || "Unnamed"),
       monthsToGrow: Number(c.monthsToGrow) || 1,
-      maxMonthsToGrow: c.maxMonthsToGrow != null ? Number(c.maxMonthsToGrow) : undefined,
       yieldPerSquareAcre: Number(c.yieldPerSquareAcre) || 0,
       acreStrawYield: c.acreStrawYield == null || c.acreStrawYield === "" ? null : Number(c.acreStrawYield),
       // sell prices are stored as per 1,000 units
@@ -54,6 +53,10 @@
       productionChainValue: c.productionChainValue,
       economyMultiplier: c.economyMultiplier
     };
+    if (c.maxMonthsToGrow != null && c.maxMonthsToGrow !== "") {
+      normalized.maxMonthsToGrow = Number(c.maxMonthsToGrow);
+    }
+    return normalized;
   }
 
   function exportJson(crops) {
