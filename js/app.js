@@ -560,7 +560,7 @@
     const width = window.innerWidth;
     const height = window.innerHeight;
     const fromLeft = Math.random() < 0.5;
-    const tornadoYBase = height * (0.72 + Math.random() * 0.12);
+    const tornadoYBase = height * (0.84 + Math.random() * 0.08);
     const tornadoStartX = fromLeft ? -140 : width + 140;
     const tornadoEndX = fromLeft ? width + 140 : -140;
     const swirlDir = fromLeft ? 1 : -1;
@@ -575,7 +575,7 @@
         : 1 - Math.pow(-2 * p + 2, 2) / 2;
       return {
         x: tornadoStartX + (tornadoEndX - tornadoStartX) * eased,
-        y: tornadoYBase + Math.sin(elapsed * 0.01) * 18
+        y: tornadoYBase + Math.sin(elapsed * 0.01) * 10
       };
     }
 
@@ -622,7 +622,7 @@
     const tornadoStartsAt = 1400;
     const sweepDuration = 9000;
     const totalMs = 12000;
-    const hitRadius = 170;
+    const hitRadius = 185;
 
     function frame(now) {
       const elapsed = now - start;
@@ -656,17 +656,17 @@
           if (dist <= hitRadius) {
             const influence = 1 - dist / hitRadius;
             // Pull inward while adding tangential swirl only inside the hitbox.
-            const pull = 0.035 * influence;
-            const swirl = 0.055 * influence;
+            const pull = 0.085 * influence;
+            const swirl = 0.13 * influence;
             t.vx += nx * pull + (-ny) * swirl * swirlDir;
             t.vy += ny * pull + nx * swirl * swirlDir;
 
             // Small kick for storm turbulence only while inside hitbox.
-            t.vx += (Math.random() - 0.5) * 0.012 * influence;
-            t.vy += (Math.random() - 0.5) * 0.012 * influence;
+            t.vx += (Math.random() - 0.5) * 0.026 * influence;
+            t.vy += (Math.random() - 0.5) * 0.026 * influence;
 
-            t.vx *= 0.97;
-            t.vy *= 0.97;
+            t.vx *= 0.978;
+            t.vy *= 0.978;
           } else {
             // Outside hitbox: no tornado force, just settle near the bottom.
             t.vx *= 0.92;
@@ -675,8 +675,8 @@
           }
         }
 
-        t.x += t.vx * dt * 1.7;
-        t.y += t.vy * dt * 1.7;
+        t.x += t.vx * dt * 2.35;
+        t.y += t.vy * dt * 2.35;
         t.angle += t.spin * dt * 28;
 
         const fade = 1 - Math.max(0, elapsed - (totalMs - 1100)) / 1100;

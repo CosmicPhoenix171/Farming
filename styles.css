@@ -514,14 +514,14 @@ input[type="checkbox"] { accent-color: var(--green); }
   width: 340px;
   height: 340px;
   border-radius: 50%;
-  border: 2px dashed rgba(240, 196, 25, 0.55);
-  box-shadow: inset 0 0 26px rgba(240, 196, 25, 0.15);
+  border: none;
+  box-shadow: none;
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.92);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: none;
 }
 .fx-hitbox.active {
-  opacity: 0.55;
+  opacity: 0;
   transform: translate(-50%, -50%) scale(1);
 }
 
