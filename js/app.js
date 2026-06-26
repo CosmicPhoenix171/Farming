@@ -54,6 +54,30 @@
     if (avg == null) return null;
     return (c.yieldPerSquareAcre / 1000) * avg;
   }
+  function yearlyPricePerAcre(c) {
+    const one = pricePerAcre(c);
+    if (one == null) return null;
+    return one * harvestsPerYear(c);
+  }
+  function yearlyPricePerAcreMin(c) {
+    const one = pricePerAcre(c);
+    if (one == null) return null;
+    return one * harvestsPerYearMax(c);
+  }
+  function pricePerAcreLabel(c) {
+    const v = pricePerAcre(c);
+    if (v == null) return "—";
+    return fmt(Math.round(v));
+  }
+  function yearlyPricePerAcreLabel(c) {
+    const hi = yearlyPricePerAcre(c);
+    if (hi == null) return "—";
+    if (isRange(c)) {
+      const lo = yearlyPricePerAcreMin(c);
+      return lo === hi ? fmt(Math.round(hi)) : `${fmt(Math.round(lo))}–${fmt(Math.round(hi))}`;
+    }
+    return fmt(Math.round(hi));
+  }
   function efficiency(c) {
     // simple efficiency metric: yield per month of growth
     return c.yieldPerSquareAcre / c.monthsToGrow;
@@ -375,6 +399,7 @@
       case "lowSellPrice": return c.lowSellPrice ?? -1;
       case "highSellPrice": return c.highSellPrice ?? -1;
       case "pricePerAcre": return pricePerAcre(c) ?? -1;
+      case "yearlyPricePerAcre": return yearlyPricePerAcre(c) ?? -1;
       default: return 0;
     }
   }
@@ -407,7 +432,7 @@
     });
 
     if (!list.length) {
-      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:24px">No crops match your filters.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:24px">No crops match your filters.</td></tr>`;
       return;
     }
 
@@ -423,7 +448,8 @@
           <td class="num">${yearlyStrawLabel(c)}</td>
           <td class="num">${fmt(c.lowSellPrice)}</td>
           <td class="num">${fmt(c.highSellPrice)}</td>
-          <td class="num">${fmt(Math.round(pricePerAcre(c)))}</td>
+          <td class="num">${pricePerAcreLabel(c)}</td>
+          <td class="num">${yearlyPricePerAcreLabel(c)}</td>
           <td class="notes">${escapeHtml(c.notes || "")}</td>
         </tr>
       `;
