@@ -559,19 +559,36 @@
 
     const width = window.innerWidth;
     const height = window.innerHeight;
-    const center = {
-      x: width * (0.55 + Math.random() * 0.2),
-      y: height * (0.7 + Math.random() * 0.15)
-    };
+    const fromLeft = Math.random() < 0.5;
+    const tornadoYBase = height * (0.72 + Math.random() * 0.12);
+    const tornadoStartX = fromLeft ? -140 : width + 140;
+    const tornadoEndX = fromLeft ? width + 140 : -140;
+    const swirlDir = fromLeft ? 1 : -1;
+
+    function tornadoPosition(elapsed, tornadoStartsAt, sweepDuration) {
+      if (elapsed <= tornadoStartsAt) {
+        return { x: tornadoStartX, y: tornadoYBase };
+      }
+      const p = Math.min(1, (elapsed - tornadoStartsAt) / sweepDuration);
+      const eased = p < 0.5
+        ? 2 * p * p
+        : 1 - Math.pow(-2 * p + 2, 2) / 2;
+      return {
+        x: tornadoStartX + (tornadoEndX - tornadoStartX) * eased,
+        y: tornadoYBase + Math.sin(elapsed * 0.01) * 18
+      };
+    }
 
     const tornado = document.createElement("div");
     tornado.className = "fx-tornado";
-    tornado.style.left = `${center.x}px`;
-    tornado.style.top = `${center.y}px`;
+    tornado.style.left = `${tornadoStartX}px`;
+    tornado.style.top = `${tornadoYBase}px`;
     layer.appendChild(tornado);
 
     const count = 28;
     const tractors = [];
+    const bottomPad = 16;
+    const span = Math.max(100, width - 80);
     for (let i = 0; i < count; i++) {
       const el = document.createElement("span");
       el.className = "fx-tractor";
@@ -579,12 +596,16 @@
       const size = 18 + Math.random() * 18;
       el.style.fontSize = `${size}px`;
       layer.appendChild(el);
+      const lane = count === 1 ? 0.5 : i / (count - 1);
+      const baseX = 40 + lane * span + (Math.random() - 0.5) * 28;
+      const floorY = height - bottomPad - Math.random() * 20;
       tractors.push({
         el,
-        x: Math.random() * width,
-        y: height + 24 + Math.random() * 90,
-        vx: (Math.random() - 0.5) * 1.8,
-        vy: -(0.9 + Math.random() * 2.1),
+        x: baseX,
+        y: floorY + 35 + Math.random() * 30,
+        floorY,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: -(0.2 + Math.random() * 0.5),
         spin: (Math.random() - 0.5) * 0.26,
         angle: Math.random() * 360,
         bornLag: Math.random() * 420
@@ -592,20 +613,27 @@
     }
 
     const start = performance.now();
-    const tornadoStartsAt = 850;
+    const tornadoStartsAt = 900;
+    const sweepDuration = 3200;
     const totalMs = 5600;
 
     function frame(now) {
       const elapsed = now - start;
       const dt = 1;
       if (elapsed > tornadoStartsAt) tornado.classList.add("active");
+      const center = tornadoPosition(elapsed, tornadoStartsAt, sweepDuration);
+      tornado.style.left = `${center.x}px`;
+      tornado.style.top = `${center.y}px`;
 
       for (const t of tractors) {
         if (elapsed < t.bornLag) continue;
 
         if (elapsed <= tornadoStartsAt) {
-          t.vy -= 0.01;
-          t.vx *= 0.995;
+          // Keep tractors lined up near the bottom until the tornado enters.
+          t.vx += (Math.random() - 0.5) * 0.015;
+          t.vx *= 0.96;
+          t.vy += (t.floorY - t.y) * 0.09;
+          t.vy *= 0.78;
         } else {
           const dx = center.x - t.x;
           const dy = center.y - t.y;
@@ -614,17 +642,17 @@
           const ny = dy / dist;
 
           // Pull inward while adding tangential swirl to toss tractors around.
-          const pull = 0.11;
-          const swirl = 0.24;
-          t.vx += nx * pull + (-ny) * swirl;
-          t.vy += ny * pull + nx * swirl;
+          const pull = 0.16;
+          const swirl = 0.30;
+          t.vx += nx * pull + (-ny) * swirl * swirlDir;
+          t.vy += ny * pull + nx * swirl * swirlDir;
 
           // Add a little chaotic kick so the motion feels stormy.
-          t.vx += (Math.random() - 0.5) * 0.11;
-          t.vy += (Math.random() - 0.5) * 0.11;
+          t.vx += (Math.random() - 0.5) * 0.14;
+          t.vy += (Math.random() - 0.5) * 0.14;
 
-          t.vx *= 0.985;
-          t.vy *= 0.985;
+          t.vx *= 0.986;
+          t.vy *= 0.986;
         }
 
         t.x += t.vx * dt * 5.3;
