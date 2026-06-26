@@ -585,6 +585,12 @@
     tornado.style.top = `${tornadoYBase}px`;
     layer.appendChild(tornado);
 
+    const hitbox = document.createElement("div");
+    hitbox.className = "fx-hitbox";
+    hitbox.style.left = `${tornadoStartX}px`;
+    hitbox.style.top = `${tornadoYBase}px`;
+    layer.appendChild(hitbox);
+
     const count = 28;
     const tractors = [];
     const bottomPad = 16;
@@ -604,36 +610,42 @@
         x: baseX,
         y: floorY + 35 + Math.random() * 30,
         floorY,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: -(0.2 + Math.random() * 0.5),
-        spin: (Math.random() - 0.5) * 0.26,
+        vx: (Math.random() - 0.5) * 0.22,
+        vy: -(0.08 + Math.random() * 0.22),
+        spin: (Math.random() - 0.5) * 0.12,
         angle: Math.random() * 360,
         bornLag: Math.random() * 420
       });
     }
 
     const start = performance.now();
-    const tornadoStartsAt = 1050;
-    const sweepDuration = 5200;
-    const totalMs = 7600;
+    const tornadoStartsAt = 1400;
+    const sweepDuration = 9000;
+    const totalMs = 12000;
+    const hitRadius = 170;
 
     function frame(now) {
       const elapsed = now - start;
       const dt = 1;
-      if (elapsed > tornadoStartsAt) tornado.classList.add("active");
+      if (elapsed > tornadoStartsAt) {
+        tornado.classList.add("active");
+        hitbox.classList.add("active");
+      }
       const center = tornadoPosition(elapsed, tornadoStartsAt, sweepDuration);
       tornado.style.left = `${center.x}px`;
       tornado.style.top = `${center.y}px`;
+      hitbox.style.left = `${center.x}px`;
+      hitbox.style.top = `${center.y}px`;
 
       for (const t of tractors) {
         if (elapsed < t.bornLag) continue;
 
         if (elapsed <= tornadoStartsAt) {
           // Keep tractors lined up near the bottom until the tornado enters.
-          t.vx += (Math.random() - 0.5) * 0.015;
-          t.vx *= 0.96;
-          t.vy += (t.floorY - t.y) * 0.09;
-          t.vy *= 0.78;
+          t.vx += (Math.random() - 0.5) * 0.006;
+          t.vx *= 0.94;
+          t.vy += (t.floorY - t.y) * 0.05;
+          t.vy *= 0.74;
         } else {
           const dx = center.x - t.x;
           const dy = center.y - t.y;
@@ -641,23 +653,31 @@
           const nx = dx / dist;
           const ny = dy / dist;
 
-          // Pull inward while adding tangential swirl to toss tractors around.
-          const pull = 0.08;
-          const swirl = 0.14;
-          t.vx += nx * pull + (-ny) * swirl * swirlDir;
-          t.vy += ny * pull + nx * swirl * swirlDir;
+          if (dist <= hitRadius) {
+            const influence = 1 - dist / hitRadius;
+            // Pull inward while adding tangential swirl only inside the hitbox.
+            const pull = 0.035 * influence;
+            const swirl = 0.055 * influence;
+            t.vx += nx * pull + (-ny) * swirl * swirlDir;
+            t.vy += ny * pull + nx * swirl * swirlDir;
 
-          // Add a little chaotic kick so the motion feels stormy.
-          t.vx += (Math.random() - 0.5) * 0.05;
-          t.vy += (Math.random() - 0.5) * 0.05;
+            // Small kick for storm turbulence only while inside hitbox.
+            t.vx += (Math.random() - 0.5) * 0.012 * influence;
+            t.vy += (Math.random() - 0.5) * 0.012 * influence;
 
-          t.vx *= 0.986;
-          t.vy *= 0.986;
+            t.vx *= 0.97;
+            t.vy *= 0.97;
+          } else {
+            // Outside hitbox: no tornado force, just settle near the bottom.
+            t.vx *= 0.92;
+            t.vy += (t.floorY - t.y) * 0.03;
+            t.vy *= 0.84;
+          }
         }
 
-        t.x += t.vx * dt * 3.2;
-        t.y += t.vy * dt * 3.2;
-        t.angle += t.spin * dt * 75;
+        t.x += t.vx * dt * 1.7;
+        t.y += t.vy * dt * 1.7;
+        t.angle += t.spin * dt * 28;
 
         const fade = 1 - Math.max(0, elapsed - (totalMs - 1100)) / 1100;
         t.el.style.opacity = String(Math.max(0, Math.min(1, fade)));

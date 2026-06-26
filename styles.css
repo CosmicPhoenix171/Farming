@@ -509,6 +509,21 @@ input[type="checkbox"] { accent-color: var(--green); }
   transform: translate(-50%, -50%) scale(1) skewX(-13deg);
   transition: opacity 0.22s ease, transform 0.22s ease;
 }
+.fx-hitbox {
+  position: absolute;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  border: 2px dashed rgba(240, 196, 25, 0.55);
+  box-shadow: inset 0 0 26px rgba(240, 196, 25, 0.15);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.92);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.fx-hitbox.active {
+  opacity: 0.55;
+  transform: translate(-50%, -50%) scale(1);
+}
 
 @keyframes tornado-wobble {
   0%, 100% { margin-left: -7px; }
