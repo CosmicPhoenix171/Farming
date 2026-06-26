@@ -613,9 +613,9 @@
     }
 
     const start = performance.now();
-    const tornadoStartsAt = 900;
-    const sweepDuration = 3200;
-    const totalMs = 5600;
+    const tornadoStartsAt = 1050;
+    const sweepDuration = 5200;
+    const totalMs = 7600;
 
     function frame(now) {
       const elapsed = now - start;
@@ -642,21 +642,21 @@
           const ny = dy / dist;
 
           // Pull inward while adding tangential swirl to toss tractors around.
-          const pull = 0.16;
-          const swirl = 0.30;
+          const pull = 0.08;
+          const swirl = 0.14;
           t.vx += nx * pull + (-ny) * swirl * swirlDir;
           t.vy += ny * pull + nx * swirl * swirlDir;
 
           // Add a little chaotic kick so the motion feels stormy.
-          t.vx += (Math.random() - 0.5) * 0.14;
-          t.vy += (Math.random() - 0.5) * 0.14;
+          t.vx += (Math.random() - 0.5) * 0.05;
+          t.vy += (Math.random() - 0.5) * 0.05;
 
           t.vx *= 0.986;
           t.vy *= 0.986;
         }
 
-        t.x += t.vx * dt * 5.3;
-        t.y += t.vy * dt * 5.3;
+        t.x += t.vx * dt * 3.2;
+        t.y += t.vy * dt * 3.2;
         t.angle += t.spin * dt * 75;
 
         const fade = 1 - Math.max(0, elapsed - (totalMs - 1100)) / 1100;
