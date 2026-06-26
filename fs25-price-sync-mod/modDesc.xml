@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<modDesc descVersion="95">
+  <author>CosmicPhoenix171</author>
+  <version>1.0.0.0</version>
+  <title>
+    <en>PowerStar Price Sync</en>
+  </title>
+  <description>
+    <en>PC-only script mod that exports live economy prices and optionally posts to Firebase.</en>
+  </description>
+
+  <multiplayer supported="true" />
+
+  <extraSourceFiles>
+    <sourceFile filename="scripts/PriceSyncMod.lua" />
+  </extraSourceFiles>
+</modDesc>
