@@ -48,13 +48,10 @@
     if (c.lowSellPrice != null && c.highSellPrice != null) return (c.lowSellPrice + c.highSellPrice) / 2;
     return c.highSellPrice ?? c.lowSellPrice ?? null;
   }
-  function pricePointCategory(c) {
+  function pricePerAcre(c) {
     const avg = averageSellPrice(c);
-    if (avg == null) return "Unknown";
-    if (avg < 1000) return "Low";
-    if (avg < 2500) return "Mid";
-    if (avg < 4500) return "High";
-    return "Premium";
+    if (avg == null) return null;
+    return (c.yieldPerSquareAcre / 1000) * avg;
   }
   function efficiency(c) {
     // simple efficiency metric: yield per month of growth
@@ -370,7 +367,7 @@
       case "yearlyStraw": return yearlyStraw(c);
       case "lowSellPrice": return c.lowSellPrice ?? -1;
       case "highSellPrice": return c.highSellPrice ?? -1;
-      case "pricePointCategory": return pricePointCategory(c);
+      case "pricePerAcre": return pricePerAcre(c) ?? -1;
       default: return 0;
     }
   }
@@ -419,7 +416,7 @@
           <td class="num">${yearlyStrawLabel(c)}</td>
           <td class="num">${fmt(c.lowSellPrice)}</td>
           <td class="num">${fmt(c.highSellPrice)}</td>
-          <td>${pricePointCategory(c)}</td>
+          <td class="num">${fmt(Math.round(pricePerAcre(c)))}</td>
           <td class="notes">${escapeHtml(c.notes || "")}</td>
         </tr>
       `;
