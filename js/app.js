@@ -2,6 +2,9 @@
    FS25 Crop Tracker - main application
    ============================================================ */
 (function () {
+  let fxRafId = null;
+  let fxStopTimer = null;
+
   // ---------- State ----------
   const state = {
     crops: [],
@@ -147,6 +150,13 @@
 
   // ---------- Events ----------
   function bindEvents() {
+    const brandMark = $(".brand-mark");
+    if (brandMark) {
+      brandMark.style.cursor = "pointer";
+      brandMark.title = "Summon the tractor tornado";
+      brandMark.addEventListener("click", triggerTractorTornadoFx);
+    }
+
     // Sort
     $$("#cropTable th[data-sort]").forEach(th => {
       th.addEventListener("click", () => {
@@ -530,6 +540,114 @@
     populateTypeFilter();
     closeModal();
     renderAll();
+  }
+
+  // ---------- Fun FX ----------
+  function triggerTractorTornadoFx() {
+    const layer = $("#fxLayer");
+    if (!layer) return;
+
+    if (fxRafId) {
+      cancelAnimationFrame(fxRafId);
+      fxRafId = null;
+    }
+    if (fxStopTimer) {
+      clearTimeout(fxStopTimer);
+      fxStopTimer = null;
+    }
+    layer.innerHTML = "";
+
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const center = {
+      x: width * (0.55 + Math.random() * 0.2),
+      y: height * (0.7 + Math.random() * 0.15)
+    };
+
+    const tornado = document.createElement("div");
+    tornado.className = "fx-tornado";
+    tornado.style.left = `${center.x}px`;
+    tornado.style.top = `${center.y}px`;
+    layer.appendChild(tornado);
+
+    const count = 28;
+    const tractors = [];
+    for (let i = 0; i < count; i++) {
+      const el = document.createElement("span");
+      el.className = "fx-tractor";
+      el.textContent = "🚜";
+      const size = 18 + Math.random() * 18;
+      el.style.fontSize = `${size}px`;
+      layer.appendChild(el);
+      tractors.push({
+        el,
+        x: Math.random() * width,
+        y: height + 24 + Math.random() * 90,
+        vx: (Math.random() - 0.5) * 1.8,
+        vy: -(0.9 + Math.random() * 2.1),
+        spin: (Math.random() - 0.5) * 0.26,
+        angle: Math.random() * 360,
+        bornLag: Math.random() * 420
+      });
+    }
+
+    const start = performance.now();
+    const tornadoStartsAt = 850;
+    const totalMs = 5600;
+
+    function frame(now) {
+      const elapsed = now - start;
+      const dt = 1;
+      if (elapsed > tornadoStartsAt) tornado.classList.add("active");
+
+      for (const t of tractors) {
+        if (elapsed < t.bornLag) continue;
+
+        if (elapsed <= tornadoStartsAt) {
+          t.vy -= 0.01;
+          t.vx *= 0.995;
+        } else {
+          const dx = center.x - t.x;
+          const dy = center.y - t.y;
+          const dist = Math.max(12, Math.hypot(dx, dy));
+          const nx = dx / dist;
+          const ny = dy / dist;
+
+          // Pull inward while adding tangential swirl to toss tractors around.
+          const pull = 0.11;
+          const swirl = 0.24;
+          t.vx += nx * pull + (-ny) * swirl;
+          t.vy += ny * pull + nx * swirl;
+
+          // Add a little chaotic kick so the motion feels stormy.
+          t.vx += (Math.random() - 0.5) * 0.11;
+          t.vy += (Math.random() - 0.5) * 0.11;
+
+          t.vx *= 0.985;
+          t.vy *= 0.985;
+        }
+
+        t.x += t.vx * dt * 5.3;
+        t.y += t.vy * dt * 5.3;
+        t.angle += t.spin * dt * 75;
+
+        const fade = 1 - Math.max(0, elapsed - (totalMs - 1100)) / 1100;
+        t.el.style.opacity = String(Math.max(0, Math.min(1, fade)));
+        t.el.style.transform = `translate(${t.x}px, ${t.y}px) rotate(${t.angle}deg)`;
+      }
+
+      if (elapsed < totalMs) {
+        fxRafId = requestAnimationFrame(frame);
+      }
+    }
+
+    fxRafId = requestAnimationFrame(frame);
+    fxStopTimer = setTimeout(() => {
+      if (fxRafId) cancelAnimationFrame(fxRafId);
+      fxRafId = null;
+      layer.innerHTML = "";
+      fxStopTimer = null;
+    }, totalMs + 120);
   }
 
   // ---------- Escaping ----------
