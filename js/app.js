@@ -41,6 +41,18 @@
   function yearlyStraw(c) {
     return c.acreStrawYield ? c.acreStrawYield * harvestsPerYear(c) : 0;
   }
+  function averageSellPrice(c) {
+    if (c.lowSellPrice != null && c.highSellPrice != null) return (c.lowSellPrice + c.highSellPrice) / 2;
+    return c.highSellPrice ?? c.lowSellPrice ?? null;
+  }
+  function pricePointCategory(c) {
+    const avg = averageSellPrice(c);
+    if (avg == null) return "Unknown";
+    if (avg < 1000) return "Low";
+    if (avg < 2500) return "Mid";
+    if (avg < 4500) return "High";
+    return "Premium";
+  }
   function efficiency(c) {
     // simple efficiency metric: yield per month of growth
     return c.yieldPerSquareAcre / c.monthsToGrow;
@@ -270,6 +282,9 @@
       case "harvestsPerYear": return harvestsPerYear(c);
       case "yearlyYield": return yearlyYield(c);
       case "yearlyStraw": return yearlyStraw(c);
+      case "lowSellPrice": return c.lowSellPrice ?? -1;
+      case "highSellPrice": return c.highSellPrice ?? -1;
+      case "pricePointCategory": return pricePointCategory(c);
       default: return 0;
     }
   }
@@ -302,7 +317,7 @@
     });
 
     if (!list.length) {
-      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:24px">No crops match your filters.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:24px">No crops match your filters.</td></tr>`;
       return;
     }
 
@@ -325,6 +340,9 @@
           <td class="num">${harvestsLabel(c)}</td>
           <td class="num">${yearlyYieldLabel(c)}</td>
           <td class="num">${yearlyStrawLabel(c)}</td>
+          <td class="num">${fmt(c.lowSellPrice)}</td>
+          <td class="num">${fmt(c.highSellPrice)}</td>
+          <td>${pricePointCategory(c)}</td>
           <td class="notes">${escapeHtml(c.notes || "")}</td>
           ${adminCell}
         </tr>
@@ -485,6 +503,9 @@
       <div class="stat"><span class="k">Harvests / 12 mo</span><span class="v">${harvestsLabel(c)}</span></div>
       <div class="stat"><span class="k">12-month yield</span><span class="v">${yearlyYieldLabel(c)}</span></div>
       <div class="stat"><span class="k">12-month straw</span><span class="v">${yearlyStrawLabel(c)}</span></div>
+      <div class="stat"><span class="k">Low sell price</span><span class="v">${fmt(c.lowSellPrice)}</span></div>
+      <div class="stat"><span class="k">High sell price</span><span class="v">${fmt(c.highSellPrice)}</span></div>
+      <div class="stat"><span class="k">Price point category</span><span class="v">${pricePointCategory(c)}</span></div>
       <div class="stat"><span class="k">Yield / month efficiency</span><span class="v">${fmt(Math.round(efficiency(c)))}</span></div>
       <div class="use-case"><strong>Suggested use:</strong> ${escapeHtml(useCase(c))}</div>
       ${c.notes ? `<div class="notes-box"><strong>Notes:</strong> ${escapeHtml(c.notes)}</div>` : ""}
@@ -514,6 +535,8 @@
     $("#f_maxMonths").value = c && c.maxMonthsToGrow ? c.maxMonthsToGrow : "";
     $("#f_yield").value = c ? c.yieldPerSquareAcre : "";
     $("#f_straw").value = c && c.acreStrawYield != null ? c.acreStrawYield : "";
+    $("#f_lowSell").value = c && c.lowSellPrice != null ? c.lowSellPrice : "";
+    $("#f_highSell").value = c && c.highSellPrice != null ? c.highSellPrice : "";
     $("#f_type").value = c ? c.type : "grain";
     $("#f_notes").value = c ? c.notes : "";
     $("#editModal").hidden = false;
@@ -536,6 +559,8 @@
       maxMonthsToGrow: maxM,
       yieldPerSquareAcre: Number($("#f_yield").value),
       acreStrawYield: $("#f_straw").value === "" ? null : Number($("#f_straw").value),
+      lowSellPrice: $("#f_lowSell").value === "" ? null : Number($("#f_lowSell").value),
+      highSellPrice: $("#f_highSell").value === "" ? null : Number($("#f_highSell").value),
       type: $("#f_type").value,
       notes: $("#f_notes").value.trim()
     });

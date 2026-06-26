@@ -7,6 +7,8 @@
      maxMonthsToGrow?: number,        // optional max (e.g. grass)
      yieldPerSquareAcre: number,
      acreStrawYield: number | null,
+    lowSellPrice?: number | null,
+    highSellPrice?: number | null,
      type: string,                    // grain, root, vegetable, fruit, forage, oilseed, fiber, tree, other
      notes: string,
      // future-ready fields (unused now but reserved):

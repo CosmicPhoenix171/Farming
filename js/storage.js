@@ -41,6 +41,8 @@
       maxMonthsToGrow: c.maxMonthsToGrow != null ? Number(c.maxMonthsToGrow) : undefined,
       yieldPerSquareAcre: Number(c.yieldPerSquareAcre) || 0,
       acreStrawYield: c.acreStrawYield == null || c.acreStrawYield === "" ? null : Number(c.acreStrawYield),
+      lowSellPrice: c.lowSellPrice == null || c.lowSellPrice === "" ? null : Number(c.lowSellPrice),
+      highSellPrice: c.highSellPrice == null || c.highSellPrice === "" ? null : Number(c.highSellPrice),
       type: c.type || "other",
       notes: c.notes || "",
       // future-ready fields preserved if present
@@ -61,15 +63,28 @@
     const headers = [
       "crop", "monthsToGrow", "maxMonthsToGrow", "yieldPerSquareAcre",
       "acreStrawYield", "harvestsPerYear", "yearlyYield", "yearlyStraw",
-      "type", "notes"
+      "lowSellPrice", "highSellPrice", "pricePointCategory", "type", "notes"
     ];
     const rows = crops.map(c => {
       const h = Math.floor(12 / c.monthsToGrow);
+      const avgPrice = c.lowSellPrice != null && c.highSellPrice != null
+        ? (c.lowSellPrice + c.highSellPrice) / 2
+        : (c.highSellPrice ?? c.lowSellPrice ?? null);
+      const pricePointCategory = avgPrice == null
+        ? "Unknown"
+        : avgPrice < 1000
+          ? "Low"
+          : avgPrice < 2500
+            ? "Mid"
+            : avgPrice < 4500
+              ? "High"
+              : "Premium";
       return [
         c.crop, c.monthsToGrow, c.maxMonthsToGrow ?? "",
         c.yieldPerSquareAcre, c.acreStrawYield ?? "",
         h, c.yieldPerSquareAcre * h,
         c.acreStrawYield ? c.acreStrawYield * h : "",
+        c.lowSellPrice ?? "", c.highSellPrice ?? "", pricePointCategory,
         c.type, c.notes
       ];
     });
