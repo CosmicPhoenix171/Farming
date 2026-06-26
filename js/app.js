@@ -107,19 +107,29 @@
     bindEvents();
     populateTypeFilter();
     renderAll();
-    hydrateFromCloud();
+    setupLiveCloudSync();
   }
 
-  async function hydrateFromCloud() {
+  async function setupLiveCloudSync() {
     if (!window.FirebaseSync) return;
     if (window.FirebaseSync.ready) await window.FirebaseSync.ready;
     if (!window.FirebaseSync.enabled) return;
-    const cloud = await window.FirebaseSync.loadCrops();
-    if (!Array.isArray(cloud) || !cloud.length) return;
-    state.crops = cloud.map(window.CropStore.normalize);
-    window.CropStore.save(state.crops);
-    populateTypeFilter();
-    renderAll();
+
+    let hasSeededCloud = false;
+    window.FirebaseSync.subscribeCrops(async (cloud) => {
+      if (Array.isArray(cloud) && cloud.length) {
+        state.crops = cloud.map(window.CropStore.normalize);
+        window.CropStore.save(state.crops);
+        populateTypeFilter();
+        renderAll();
+        return;
+      }
+
+      if (!hasSeededCloud && state.crops.length) {
+        hasSeededCloud = true;
+        await window.FirebaseSync.saveCrops(state.crops);
+      }
+    });
   }
 
   async function persistCrops() {
@@ -408,7 +418,7 @@
 
     svg.querySelectorAll("g[data-crop]").forEach(g => {
       g.style.cursor = "pointer";
-      g.addEventListener("click", () => openDetail(g.dataset.crop));
+      g.addEventListener("click", () => openModal(g.dataset.crop));
     });
   }
 
@@ -461,7 +471,7 @@
 
     el.querySelectorAll(".timeline-row").forEach(r => {
       r.style.cursor = "pointer";
-      r.addEventListener("click", () => openDetail(r.dataset.crop));
+      r.addEventListener("click", () => openModal(r.dataset.crop));
     });
   }
 

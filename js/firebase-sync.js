@@ -55,6 +55,8 @@
   const api = {
     enabled: false,
     _db: null,
+    _ref: null,
+    _unsubscribe: null,
     ready: Promise.resolve(),
 
     async loadCrops() {
@@ -91,6 +93,37 @@
         setStatus("Sync write failed", "err");
         return false;
       }
+    },
+
+    subscribeCrops(onChange) {
+      if (!this._db || typeof onChange !== "function") return () => {};
+      if (this._unsubscribe) this._unsubscribe();
+
+      const ref = this._db.ref(DB_PATH);
+      this._ref = ref;
+      const handler = (snap) => {
+        if (!snap.exists()) {
+          setStatus("Cloud empty", "warn");
+          onChange(null);
+          return;
+        }
+        const value = snap.val();
+        if (!Array.isArray(value)) {
+          setStatus("Cloud format issue", "err");
+          onChange(null);
+          return;
+        }
+        setStatus("Live synced", "ok");
+        onChange(value);
+      };
+      const errorHandler = (e) => {
+        console.warn("[fs25] cloud subscribe failed:", e);
+        setStatus("Live sync failed", "err");
+      };
+
+      ref.on("value", handler, errorHandler);
+      this._unsubscribe = () => ref.off("value", handler);
+      return this._unsubscribe;
     }
   };
 
