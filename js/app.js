@@ -108,6 +108,26 @@
     bindEvents();
     populateTypeFilter();
     renderAll();
+    hydrateFromCloud();
+  }
+
+  async function hydrateFromCloud() {
+    if (!window.FirebaseSync) return;
+    if (window.FirebaseSync.ready) await window.FirebaseSync.ready;
+    if (!window.FirebaseSync.enabled) return;
+    const cloud = await window.FirebaseSync.loadCrops();
+    if (!Array.isArray(cloud) || !cloud.length) return;
+    state.crops = cloud.map(window.CropStore.normalize);
+    window.CropStore.save(state.crops);
+    populateTypeFilter();
+    renderAll();
+  }
+
+  async function persistCrops() {
+    window.CropStore.save(state.crops);
+    if (window.FirebaseSync && window.FirebaseSync.enabled) {
+      await window.FirebaseSync.saveCrops(state.crops);
+    }
   }
 
   function renderAll() {
@@ -160,6 +180,7 @@
     $("#resetBtn").addEventListener("click", () => {
       if (confirm("Reset all crop data to defaults? This cannot be undone.")) {
         state.crops = window.CropStore.reset();
+        persistCrops();
         renderAll();
       }
     });
@@ -575,7 +596,7 @@
       }
       state.crops.push(newCrop);
     }
-    window.CropStore.save(state.crops);
+    persistCrops();
     populateTypeFilter();
     closeModal();
     renderAll();
@@ -584,7 +605,7 @@
   function deleteCrop(name) {
     if (!confirm(`Delete "${name}"?`)) return;
     state.crops = state.crops.filter(c => c.crop !== name);
-    window.CropStore.save(state.crops);
+    persistCrops();
     if (state.selectedCrop === name) closeDetail();
     renderAll();
   }
@@ -595,7 +616,7 @@
     window.CropStore.importJsonFile(file).then(data => {
       if (!confirm(`Import ${data.length} crops? This replaces current data.`)) return;
       state.crops = data;
-      window.CropStore.save(state.crops);
+      persistCrops();
       populateTypeFilter();
       renderAll();
     }).catch(err => alert("Import failed: " + err.message));
