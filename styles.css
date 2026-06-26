@@ -228,7 +228,7 @@ input[type="checkbox"] { accent-color: var(--green); }
 
 /* -------------------- Table -------------------- */
 .table-wrap {
-  overflow-x: auto;
+  overflow-x: hidden;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -236,13 +236,16 @@ input[type="checkbox"] { accent-color: var(--green); }
 .crop-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1400px;
+  min-width: 0;
+  table-layout: fixed;
 }
 .crop-table th, .crop-table td {
-  padding: 11px 14px;
+  padding: 8px 8px;
   text-align: left;
   border-bottom: 1px solid var(--border);
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 12px;
 }
 .crop-table th {
   background: var(--panel-2);
@@ -266,10 +269,10 @@ input[type="checkbox"] { accent-color: var(--green); }
 .crop-table tbody tr:hover { background: var(--panel-2); }
 .crop-table tbody tr.selected { background: var(--green-soft); }
 .crop-table td.num { font-variant-numeric: tabular-nums; }
-.crop-table td.notes { color: var(--muted); font-size: 13px; white-space: normal; max-width: 240px; }
+.crop-table td.notes { color: var(--muted); font-size: 12px; white-space: normal; }
 .crop-table th:last-child,
 .crop-table td.notes {
-  min-width: 240px;
+  min-width: 0;
 }
 .crop-table .row-actions { display: flex; gap: 6px; }
 .crop-table .row-actions button {

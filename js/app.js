@@ -432,13 +432,14 @@
     });
 
     if (!list.length) {
-      tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:24px">No crops match your filters.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:24px">No crops match your filters.</td></tr>`;
       return;
     }
 
-    tbody.innerHTML = list.map(c => {
+    tbody.innerHTML = list.map((c, i) => {
       return `
         <tr data-crop="${escapeAttr(c.crop)}">
+          <td class="num">${i + 1}</td>
           <td>${escapeHtml(c.crop)}${c.acreStrawYield ? '<span class="tag yellow">straw</span>' : ""}</td>
           <td class="num">${monthsLabel(c)}</td>
           <td class="num">${fmt(c.yieldPerSquareAcre)}</td>
