@@ -41,6 +41,7 @@
       maxMonthsToGrow: c.maxMonthsToGrow != null ? Number(c.maxMonthsToGrow) : undefined,
       yieldPerSquareAcre: Number(c.yieldPerSquareAcre) || 0,
       acreStrawYield: c.acreStrawYield == null || c.acreStrawYield === "" ? null : Number(c.acreStrawYield),
+      // sell prices are stored as per 1,000 units
       lowSellPrice: c.lowSellPrice == null || c.lowSellPrice === "" ? null : Number(c.lowSellPrice),
       highSellPrice: c.highSellPrice == null || c.highSellPrice === "" ? null : Number(c.highSellPrice),
       type: c.type || "other",

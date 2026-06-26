@@ -503,8 +503,8 @@
       <div class="stat"><span class="k">Harvests / 12 mo</span><span class="v">${harvestsLabel(c)}</span></div>
       <div class="stat"><span class="k">12-month yield</span><span class="v">${yearlyYieldLabel(c)}</span></div>
       <div class="stat"><span class="k">12-month straw</span><span class="v">${yearlyStrawLabel(c)}</span></div>
-      <div class="stat"><span class="k">Low sell price</span><span class="v">${fmt(c.lowSellPrice)}</span></div>
-      <div class="stat"><span class="k">High sell price</span><span class="v">${fmt(c.highSellPrice)}</span></div>
+      <div class="stat"><span class="k">Low sell price (per 1,000u)</span><span class="v">${fmt(c.lowSellPrice)}</span></div>
+      <div class="stat"><span class="k">High sell price (per 1,000u)</span><span class="v">${fmt(c.highSellPrice)}</span></div>
       <div class="stat"><span class="k">Price point category</span><span class="v">${pricePointCategory(c)}</span></div>
       <div class="stat"><span class="k">Yield / month efficiency</span><span class="v">${fmt(Math.round(efficiency(c)))}</span></div>
       <div class="use-case"><strong>Suggested use:</strong> ${escapeHtml(useCase(c))}</div>
