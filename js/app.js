@@ -202,10 +202,14 @@
       if (!keyRaw) continue;
       const key = cropAliases[keyRaw] || keyRaw;
 
-      if (key === "straw") {
-        const strawLow = readNumber(e.lowSellPrice, e.lowPrice, e.minPrice);
-        const strawHigh = readNumber(e.highSellPrice, e.highPrice, e.maxPrice);
-        const strawAvg = readNumber(e.avgPrice, e.price, e.currentPrice);
+      const low = readNumber(e.lowSellPrice, e.lowPrice, e.minPrice);
+      const high = readNumber(e.highSellPrice, e.highPrice, e.maxPrice);
+      const avg = readNumber(e.avgPrice, e.price, e.currentPrice);
+
+      if (key === "straw" || key.includes("straw")) {
+        const strawLow = low;
+        const strawHigh = high;
+        const strawAvg = avg;
 
         if (strawLow != null) state.liveStrawLowSellPrice = Math.round(strawLow);
         if (strawHigh != null) state.liveStrawHighSellPrice = Math.round(strawHigh);
@@ -217,7 +221,6 @@
         } else if (strawHigh != null && strawLow == null) {
           state.liveStrawLowSellPrice = Math.round(strawHigh);
         }
-        continue;
       }
 
       let idx = byKey.get(key);
@@ -225,10 +228,6 @@
         idx = state.crops.findIndex(c => key.includes(normalizeKey(c.crop)) || normalizeKey(c.crop).includes(key));
       }
       if (idx == null || idx < 0) continue;
-
-      const low = readNumber(e.lowSellPrice, e.lowPrice, e.minPrice);
-      const high = readNumber(e.highSellPrice, e.highPrice, e.maxPrice);
-      const avg = readNumber(e.avgPrice, e.price, e.currentPrice);
 
       if (low == null && high == null && avg == null) continue;
 
@@ -246,6 +245,20 @@
         crop.highSellPrice = Math.round(low);
       } else if (high != null && low == null) {
         crop.lowSellPrice = Math.round(high);
+      }
+    }
+
+    // Fallback: if Firebase updated a Straw crop row but no dedicated straw live entry was detected,
+    // use the Straw crop's current low/high as the straw component for include-straw calculations.
+    if (state.liveStrawLowSellPrice == null && state.liveStrawHighSellPrice == null) {
+      const strawCrop = state.crops.find(c => normalizeKey(c.crop) === "straw");
+      if (strawCrop) {
+        const low = readNumber(strawCrop.lowSellPrice);
+        const high = readNumber(strawCrop.highSellPrice);
+        if (low != null || high != null) {
+          state.liveStrawLowSellPrice = low != null ? Math.round(low) : Math.round(high);
+          state.liveStrawHighSellPrice = high != null ? Math.round(high) : Math.round(low);
+        }
       }
     }
   }
