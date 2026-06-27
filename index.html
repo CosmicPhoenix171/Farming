@@ -83,6 +83,7 @@
               <th data-sort="crop">Crop</th>
               <th data-sort="monthsToGrow">Months to Grow</th>
               <th data-sort="yieldPerSquareAcre">Yield / Acre</th>
+              <th data-sort="harvestBonusPercent">Harvest Bonus %</th>
               <th data-sort="acreStrawYield">Straw / Acre</th>
               <th data-sort="harvestsPerYear">Harvests / 12mo</th>
               <th data-sort="yearlyYield">12-Mo Yield</th>
@@ -145,6 +146,7 @@
         <label>Months to grow<input type="number" id="f_months" min="1" max="12" step="1" required /></label>
         <label>Max months (optional, e.g. grass)<input type="number" id="f_maxMonths" min="1" max="12" step="1" /></label>
         <label>Yield per square acre<input type="number" id="f_yield" min="0" step="1" required /></label>
+        <label>Harvest bonus % (optional)<input type="number" id="f_bonus" min="0" step="0.1" placeholder="e.g. 15" /></label>
         <label>Acres harvested (helper)<input type="number" id="f_calcAcres" min="0" step="0.01" placeholder="e.g. 12.5" /></label>
         <label>Amount harvested (helper)<input type="number" id="f_calcHarvested" min="0" step="1" placeholder="total units" /></label>
         <div class="yield-helper full">

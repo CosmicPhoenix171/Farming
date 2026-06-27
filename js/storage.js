@@ -39,6 +39,7 @@
       crop: String(c.crop || "Unnamed"),
       monthsToGrow: Number(c.monthsToGrow) || 1,
       yieldPerSquareAcre: Number(c.yieldPerSquareAcre) || 0,
+      harvestBonusPercent: c.harvestBonusPercent == null || c.harvestBonusPercent === "" ? null : Number(c.harvestBonusPercent),
       acreStrawYield: c.acreStrawYield == null || c.acreStrawYield === "" ? null : Number(c.acreStrawYield),
       // sell prices are stored as per 1,000 units
       lowSellPrice: c.lowSellPrice == null || c.lowSellPrice === "" ? null : Number(c.lowSellPrice),

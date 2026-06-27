@@ -186,6 +186,10 @@
     }
     return fmt(yearlyStraw(c));
   }
+  function harvestBonusLabel(c) {
+    if (c.harvestBonusPercent == null) return "—";
+    return `${Number(c.harvestBonusPercent).toLocaleString(undefined, { maximumFractionDigits: 1 })}%`;
+  }
 
   function normalizeKey(v) {
     return String(v || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -476,6 +480,7 @@
       case "crop": return c.crop.toLowerCase();
       case "monthsToGrow": return c.monthsToGrow;
       case "yieldPerSquareAcre": return c.yieldPerSquareAcre;
+      case "harvestBonusPercent": return c.harvestBonusPercent ?? -1;
       case "acreStrawYield": return c.acreStrawYield ?? -1;
       case "harvestsPerYear": return harvestsPerYear(c);
       case "yearlyYield": return yearlyYield(c);
@@ -517,7 +522,7 @@
     });
 
     if (!list.length) {
-      tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:24px">No crops match your filters.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;color:var(--muted);padding:24px">No crops match your filters.</td></tr>`;
       return;
     }
 
@@ -528,6 +533,7 @@
           <td>${escapeHtml(c.crop)}${c.acreStrawYield ? '<span class="tag yellow">straw</span>' : ""}</td>
           <td class="num">${monthsLabel(c)}</td>
           <td class="num${c.playerYieldInput ? " player-yield" : ""}">${fmt(c.yieldPerSquareAcre)}</td>
+          <td class="num">${harvestBonusLabel(c)}</td>
           <td class="num">${fmt(c.acreStrawYield)}</td>
           <td class="num">${harvestsLabel(c)}</td>
           <td class="num">${yearlyYieldLabel(c)}</td>
@@ -678,6 +684,7 @@
     $("#f_months").value = c ? c.monthsToGrow : "";
     $("#f_maxMonths").value = c && c.maxMonthsToGrow ? c.maxMonthsToGrow : "";
     $("#f_yield").value = c ? c.yieldPerSquareAcre : "";
+    $("#f_bonus").value = c && c.harvestBonusPercent != null ? c.harvestBonusPercent : "";
     $("#f_straw").value = c && c.acreStrawYield != null ? c.acreStrawYield : "";
     $("#f_lowSell").value = c && c.lowSellPrice != null ? c.lowSellPrice : "";
     $("#f_highSell").value = c && c.highSellPrice != null ? c.highSellPrice : "";
@@ -761,6 +768,7 @@
       monthsToGrow: Number($("#f_months").value),
       maxMonthsToGrow: maxM,
       yieldPerSquareAcre: Number($("#f_yield").value),
+      harvestBonusPercent: $("#f_bonus").value === "" ? null : Number($("#f_bonus").value),
       acreStrawYield: $("#f_straw").value === "" ? null : Number($("#f_straw").value),
       lowSellPrice: $("#f_lowSell").value === "" ? null : Number($("#f_lowSell").value),
       highSellPrice: $("#f_highSell").value === "" ? null : Number($("#f_highSell").value),
