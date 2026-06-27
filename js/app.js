@@ -308,9 +308,30 @@
   function init() {
     state.crops = window.CropStore.load();
     bindEvents();
+    syncFilterControls();
     populateTypeFilter();
     renderAll();
     setupLiveCloudSync();
+  }
+
+  function syncFilterControls() {
+    const search = $("#searchInput");
+    const growth = $("#growthFilter");
+    const type = $("#typeFilter");
+    const strawOnly = $("#strawOnly");
+    const includeStrawValue = $("#includeStrawValue");
+    const usePlayerData = $("#usePlayerData");
+    const playerInfoOnly = $("#playerInfoOnly");
+    const bestYearlyOnly = $("#bestYearlyOnly");
+
+    if (search) search.value = state.filters.search;
+    if (growth) growth.value = state.filters.growth;
+    if (type) type.value = state.filters.type;
+    if (strawOnly) strawOnly.checked = state.filters.strawOnly;
+    if (includeStrawValue) includeStrawValue.checked = state.filters.includeStrawValue;
+    if (usePlayerData) usePlayerData.checked = state.filters.usePlayerData;
+    if (playerInfoOnly) playerInfoOnly.checked = state.filters.playerInfoOnly;
+    if (bestYearlyOnly) bestYearlyOnly.checked = state.filters.bestYearlyOnly;
   }
 
   async function setupLiveCloudSync() {
@@ -556,7 +577,10 @@
     });
 
     if (!list.length) {
-      tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;color:var(--muted);padding:24px">No crops match your filters.</td></tr>`;
+      const hint = state.filters.playerInfoOnly
+        ? "No crops found with player info. Uncheck 'Show crops with player info' to see all crops."
+        : "No crops match your filters.";
+      tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;color:var(--muted);padding:24px">${hint}</td></tr>`;
       return;
     }
 
