@@ -15,6 +15,7 @@
       type: "all",
       strawOnly: false,
       includeStrawValue: false,
+      usePlayerData: true,
       bestYearlyOnly: false
     },
     livePriceEntries: [],
@@ -32,17 +33,29 @@
   function harvestsPerYear(c) {
     return Math.floor(12 / c.monthsToGrow);
   }
+  function playerYieldPerAcre(c) {
+    return readNumber(c.playerYieldPerSquareAcre);
+  }
+  function effectiveYieldPerAcre(c) {
+    const base = readNumber(c.yieldPerSquareAcre) ?? 0;
+    if (!state.filters.usePlayerData) return base;
+    const player = playerYieldPerAcre(c);
+    return player ?? base;
+  }
+  function isUsingPlayerYield(c) {
+    return state.filters.usePlayerData && playerYieldPerAcre(c) != null;
+  }
   function harvestsPerYearMax(c) {
     // for grass-style crops, max months means fewer harvests
     if (!c.maxMonthsToGrow) return harvestsPerYear(c);
     return Math.floor(12 / c.maxMonthsToGrow);
   }
   function yearlyYield(c) {
-    return c.yieldPerSquareAcre * harvestsPerYear(c);
+    return effectiveYieldPerAcre(c) * harvestsPerYear(c);
   }
   function yearlyYieldMin(c) {
     // worst case (longer growth) for ranged crops
-    return c.yieldPerSquareAcre * harvestsPerYearMax(c);
+    return effectiveYieldPerAcre(c) * harvestsPerYearMax(c);
   }
   function yearlyStraw(c) {
     return c.acreStrawYield ? c.acreStrawYield * harvestsPerYear(c) : 0;
@@ -93,7 +106,7 @@
   }
   function pricePerAcre(c) {
     const cropHigh = cropCalcSellPrice(c);
-    const cropPart = cropHigh == null ? null : (c.yieldPerSquareAcre / 1000) * cropHigh;
+    const cropPart = cropHigh == null ? null : (effectiveYieldPerAcre(c) / 1000) * cropHigh;
 
     if (!includeStrawValue(c)) return cropPart;
 
@@ -153,7 +166,7 @@
   }
   function efficiency(c) {
     // simple efficiency metric: yield per month of growth
-    return c.yieldPerSquareAcre / c.monthsToGrow;
+    return effectiveYieldPerAcre(c) / c.monthsToGrow;
   }
   function isRange(c) {
     return c.maxMonthsToGrow && c.maxMonthsToGrow !== c.monthsToGrow;
@@ -356,6 +369,7 @@
     $("#typeFilter").addEventListener("change", e => { state.filters.type = e.target.value; renderTable(); });
     $("#strawOnly").addEventListener("change", e => { state.filters.strawOnly = e.target.checked; renderTable(); });
     $("#includeStrawValue").addEventListener("change", e => { state.filters.includeStrawValue = e.target.checked; renderTable(); });
+    $("#usePlayerData").addEventListener("change", e => { state.filters.usePlayerData = e.target.checked; renderAll(); });
     $("#bestYearlyOnly").addEventListener("change", e => { state.filters.bestYearlyOnly = e.target.checked; renderTable(); });
 
     // Chart sort
@@ -400,7 +414,7 @@
       $("#dashboardCards").innerHTML = `<div class="card"><div class="label">No data</div><div class="value">—</div></div>`;
       return;
     }
-    const bestYield = [...state.crops].sort((a, b) => b.yieldPerSquareAcre - a.yieldPerSquareAcre)[0];
+    const bestYield = [...state.crops].sort((a, b) => effectiveYieldPerAcre(b) - effectiveYieldPerAcre(a))[0];
     const bestYearly = [...state.crops].sort((a, b) => yearlyYield(b) - yearlyYield(a))[0];
     const fastest = [...state.crops].sort((a, b) => a.monthsToGrow - b.monthsToGrow)[0];
     const strawCrops = state.crops.filter(c => c.acreStrawYield);
@@ -413,7 +427,7 @@
       {
         label: "Best yield / acre (single)",
         value: bestYield.crop,
-        sub: `${fmt(bestYield.yieldPerSquareAcre)} / acre`
+        sub: `${fmt(effectiveYieldPerAcre(bestYield))} / acre`
       },
       {
         label: "Best 12-month yield",
@@ -479,7 +493,7 @@
     switch (key) {
       case "crop": return c.crop.toLowerCase();
       case "monthsToGrow": return c.monthsToGrow;
-      case "yieldPerSquareAcre": return c.yieldPerSquareAcre;
+      case "yieldPerSquareAcre": return effectiveYieldPerAcre(c);
       case "harvestBonusPercent": return c.harvestBonusPercent ?? -1;
       case "acreStrawYield": return c.acreStrawYield ?? -1;
       case "harvestsPerYear": return harvestsPerYear(c);
@@ -532,7 +546,7 @@
           <td class="num">${i + 1}</td>
           <td>${escapeHtml(c.crop)}${c.acreStrawYield ? '<span class="tag yellow">straw</span>' : ""}</td>
           <td class="num">${monthsLabel(c)}</td>
-          <td class="num${c.playerYieldInput ? " player-yield" : ""}">${fmt(c.yieldPerSquareAcre)}</td>
+          <td class="num${isUsingPlayerYield(c) ? " player-yield" : ""}">${fmt(effectiveYieldPerAcre(c))}</td>
           <td class="num">${harvestBonusLabel(c)}</td>
           <td class="num">${fmt(c.acreStrawYield)}</td>
           <td class="num">${harvestsLabel(c)}</td>
@@ -776,6 +790,7 @@
       notes: $("#f_notes").value.trim()
     });
     const usedPlayerYieldInput = state.yieldSamples.length > 0;
+    const enteredYield = Number($("#f_yield").value);
     if (!newCrop.crop) return;
     if (original) {
       const idx = state.crops.findIndex(x => x.crop === original);
@@ -786,7 +801,14 @@
         } else {
           newCrop.manualPriceOverrideAt = prev.manualPriceOverrideAt ?? null;
         }
-        newCrop.playerYieldInput = usedPlayerYieldInput ? true : !!prev.playerYieldInput;
+        if (usedPlayerYieldInput) {
+          newCrop.playerYieldPerSquareAcre = enteredYield;
+          newCrop.yieldPerSquareAcre = readNumber(prev.yieldPerSquareAcre, enteredYield) ?? enteredYield;
+        } else {
+          newCrop.playerYieldPerSquareAcre = readNumber(prev.playerYieldPerSquareAcre);
+          newCrop.yieldPerSquareAcre = enteredYield;
+        }
+        newCrop.playerYieldInput = newCrop.playerYieldPerSquareAcre != null;
         state.crops[idx] = newCrop;
       }
     } else {
@@ -797,7 +819,8 @@
       if (newCrop.lowSellPrice != null || newCrop.highSellPrice != null) {
         newCrop.manualPriceOverrideAt = Date.now();
       }
-      newCrop.playerYieldInput = usedPlayerYieldInput;
+      newCrop.playerYieldPerSquareAcre = usedPlayerYieldInput ? enteredYield : null;
+      newCrop.playerYieldInput = newCrop.playerYieldPerSquareAcre != null;
       state.crops.push(newCrop);
     }
     persistCrops();

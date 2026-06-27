@@ -35,17 +35,23 @@
   }
 
   function normalize(c) {
+    const baseYield = Number(c.yieldPerSquareAcre) || 0;
+    const playerYield = c.playerYieldPerSquareAcre == null || c.playerYieldPerSquareAcre === ""
+      ? (c.playerYieldInput ? baseYield : null)
+      : Number(c.playerYieldPerSquareAcre);
+
     const normalized = {
       crop: String(c.crop || "Unnamed"),
       monthsToGrow: Number(c.monthsToGrow) || 1,
-      yieldPerSquareAcre: Number(c.yieldPerSquareAcre) || 0,
+      yieldPerSquareAcre: baseYield,
+      playerYieldPerSquareAcre: playerYield,
       harvestBonusPercent: c.harvestBonusPercent == null || c.harvestBonusPercent === "" ? null : Number(c.harvestBonusPercent),
       acreStrawYield: c.acreStrawYield == null || c.acreStrawYield === "" ? null : Number(c.acreStrawYield),
       // sell prices are stored as per 1,000 units
       lowSellPrice: c.lowSellPrice == null || c.lowSellPrice === "" ? null : Number(c.lowSellPrice),
       highSellPrice: c.highSellPrice == null || c.highSellPrice === "" ? null : Number(c.highSellPrice),
       manualPriceOverrideAt: c.manualPriceOverrideAt == null || c.manualPriceOverrideAt === "" ? null : Number(c.manualPriceOverrideAt),
-      playerYieldInput: !!c.playerYieldInput,
+      playerYieldInput: playerYield != null,
       type: c.type || "other",
       notes: c.notes || "",
       // future-ready fields preserved if present
