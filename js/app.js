@@ -47,8 +47,7 @@
   function yearlyStraw(c) {
     return c.acreStrawYield ? c.acreStrawYield * harvestsPerYear(c) : 0;
   }
-  function cropAverageSellPrice(c) {
-    if (c.lowSellPrice != null && c.highSellPrice != null) return (c.lowSellPrice + c.highSellPrice) / 2;
+  function cropCalcSellPrice(c) {
     return c.highSellPrice ?? c.lowSellPrice ?? null;
   }
   const DEFAULT_STRAW_LOW_SELL_PRICE = 33;
@@ -84,13 +83,6 @@
     if (high == null && strawHigh == null) return null;
     return (high ?? 0) + (strawHigh ?? 0);
   }
-  function averageSellPrice(c) {
-    const cropAvg = cropAverageSellPrice(c);
-    if (!includeStrawValue(c)) return cropAvg;
-    const strawAvg = manualStrawPriceRange().avg;
-    if (cropAvg == null && strawAvg == null) return null;
-    return (cropAvg ?? 0) + (strawAvg ?? 0);
-  }
   function lowSellPriceLabel(c) {
     const low = effectiveLowSellPrice(c);
     return low == null ? "—" : fmt(Math.round(low));
@@ -100,21 +92,21 @@
     return high == null ? "—" : fmt(Math.round(high));
   }
   function pricePerAcre(c) {
-    const cropAvg = cropAverageSellPrice(c);
-    const cropPart = cropAvg == null ? null : (c.yieldPerSquareAcre / 1000) * cropAvg;
+    const cropHigh = cropCalcSellPrice(c);
+    const cropPart = cropHigh == null ? null : (c.yieldPerSquareAcre / 1000) * cropHigh;
 
     if (!includeStrawValue(c)) return cropPart;
 
-    const strawAvg = manualStrawPriceRange().avg;
-    const strawPart = strawAvg == null ? null : (c.acreStrawYield / 1000) * strawAvg;
+    const strawHigh = manualStrawPriceRange().high;
+    const strawPart = strawHigh == null ? null : (c.acreStrawYield / 1000) * strawHigh;
     if (cropPart == null && strawPart == null) return null;
     return (cropPart ?? 0) + (strawPart ?? 0);
   }
   function strawPricePerAcre(c) {
     if (!c.acreStrawYield) return null;
-    const strawAvg = manualStrawPriceRange().avg;
-    if (strawAvg == null) return null;
-    return (c.acreStrawYield / 1000) * strawAvg;
+    const strawHigh = manualStrawPriceRange().high;
+    if (strawHigh == null) return null;
+    return (c.acreStrawYield / 1000) * strawHigh;
   }
   function yearlyStrawPricePerAcre(c) {
     const one = strawPricePerAcre(c);
