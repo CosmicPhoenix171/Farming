@@ -109,6 +109,31 @@
     if (cropPart == null && strawPart == null) return null;
     return (cropPart ?? 0) + (strawPart ?? 0);
   }
+  function strawPricePerAcre(c) {
+    if (!c.acreStrawYield) return null;
+    const strawAvg = manualStrawPriceRange().avg;
+    if (strawAvg == null) return null;
+    return (c.acreStrawYield / 1000) * strawAvg;
+  }
+  function yearlyStrawPricePerAcre(c) {
+    const one = strawPricePerAcre(c);
+    if (one == null) return null;
+    return one * harvestsPerYear(c);
+  }
+  function yearlyStrawPricePerAcreMin(c) {
+    const one = strawPricePerAcre(c);
+    if (one == null) return null;
+    return one * harvestsPerYearMax(c);
+  }
+  function yearlyStrawPricePerAcreLabel(c) {
+    const hi = yearlyStrawPricePerAcre(c);
+    if (hi == null) return "—";
+    if (isRange(c)) {
+      const lo = yearlyStrawPricePerAcreMin(c);
+      return lo === hi ? fmt(Math.round(hi)) : `${fmt(Math.round(lo))}–${fmt(Math.round(hi))}`;
+    }
+    return fmt(Math.round(hi));
+  }
   function yearlyPricePerAcre(c) {
     const one = pricePerAcre(c);
     if (one == null) return null;
@@ -459,6 +484,7 @@
       case "harvestsPerYear": return harvestsPerYear(c);
       case "yearlyYield": return yearlyYield(c);
       case "yearlyStraw": return yearlyStraw(c);
+      case "yearlyStrawPricePerAcre": return yearlyStrawPricePerAcre(c) ?? -1;
       case "lowSellPrice": return effectiveLowSellPrice(c) ?? -1;
       case "highSellPrice": return effectiveHighSellPrice(c) ?? -1;
       case "pricePerAcre": return pricePerAcre(c) ?? -1;
@@ -495,7 +521,7 @@
     });
 
     if (!list.length) {
-      tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:24px">No crops match your filters.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;color:var(--muted);padding:24px">No crops match your filters.</td></tr>`;
       return;
     }
 
@@ -510,6 +536,7 @@
           <td class="num">${harvestsLabel(c)}</td>
           <td class="num">${yearlyYieldLabel(c)}</td>
           <td class="num">${yearlyStrawLabel(c)}</td>
+          <td class="num">${yearlyStrawPricePerAcreLabel(c)}</td>
           <td class="num">${lowSellPriceLabel(c)}</td>
           <td class="num">${highSellPriceLabel(c)}</td>
           <td class="num">${pricePerAcreLabel(c)}</td>
