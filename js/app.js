@@ -37,10 +37,10 @@
     return readNumber(c.playerYieldPerSquareAcre);
   }
   function effectiveYieldPerAcre(c) {
-    const base = readNumber(c.yieldPerSquareAcre) ?? 0;
-    if (!state.filters.usePlayerData) return base;
+    const base = readNumber(c.yieldPerSquareAcre);
+    if (!state.filters.usePlayerData) return base ?? null;
     const player = playerYieldPerAcre(c);
-    return player ?? base;
+    return player ?? base ?? null;
   }
   function isUsingPlayerYield(c) {
     return state.filters.usePlayerData && playerYieldPerAcre(c) != null;
@@ -51,11 +51,15 @@
     return Math.floor(12 / c.maxMonthsToGrow);
   }
   function yearlyYield(c) {
-    return effectiveYieldPerAcre(c) * harvestsPerYear(c);
+    const y = effectiveYieldPerAcre(c);
+    if (y == null) return null;
+    return y * harvestsPerYear(c);
   }
   function yearlyYieldMin(c) {
     // worst case (longer growth) for ranged crops
-    return effectiveYieldPerAcre(c) * harvestsPerYearMax(c);
+    const y = effectiveYieldPerAcre(c);
+    if (y == null) return null;
+    return y * harvestsPerYearMax(c);
   }
   function yearlyStraw(c) {
     return c.acreStrawYield ? c.acreStrawYield * harvestsPerYear(c) : 0;
@@ -106,7 +110,8 @@
   }
   function pricePerAcre(c) {
     const cropHigh = cropCalcSellPrice(c);
-    const cropPart = cropHigh == null ? null : (effectiveYieldPerAcre(c) / 1000) * cropHigh;
+    const y = effectiveYieldPerAcre(c);
+    const cropPart = cropHigh == null || y == null ? null : (y / 1000) * cropHigh;
 
     if (!includeStrawValue(c)) return cropPart;
 
@@ -166,7 +171,9 @@
   }
   function efficiency(c) {
     // simple efficiency metric: yield per month of growth
-    return effectiveYieldPerAcre(c) / c.monthsToGrow;
+    const y = effectiveYieldPerAcre(c);
+    if (y == null) return null;
+    return y / c.monthsToGrow;
   }
   function isRange(c) {
     return c.maxMonthsToGrow && c.maxMonthsToGrow !== c.monthsToGrow;
@@ -183,12 +190,13 @@
     return `${harvestsPerYear(c)}`;
   }
   function yearlyYieldLabel(c) {
+    const hi = yearlyYield(c);
+    if (hi == null) return "—";
     if (isRange(c)) {
-      const hi = yearlyYield(c);
       const lo = yearlyYieldMin(c);
       return lo === hi ? fmt(hi) : `${fmt(lo)}–${fmt(hi)}`;
     }
-    return fmt(yearlyYield(c));
+    return fmt(hi);
   }
   function yearlyStrawLabel(c) {
     if (!c.acreStrawYield) return "—";
@@ -414,14 +422,14 @@
       $("#dashboardCards").innerHTML = `<div class="card"><div class="label">No data</div><div class="value">—</div></div>`;
       return;
     }
-    const bestYield = [...state.crops].sort((a, b) => effectiveYieldPerAcre(b) - effectiveYieldPerAcre(a))[0];
-    const bestYearly = [...state.crops].sort((a, b) => yearlyYield(b) - yearlyYield(a))[0];
+    const bestYield = [...state.crops].sort((a, b) => (effectiveYieldPerAcre(b) ?? -1) - (effectiveYieldPerAcre(a) ?? -1))[0];
+    const bestYearly = [...state.crops].sort((a, b) => (yearlyYield(b) ?? -1) - (yearlyYield(a) ?? -1))[0];
     const fastest = [...state.crops].sort((a, b) => a.monthsToGrow - b.monthsToGrow)[0];
     const strawCrops = state.crops.filter(c => c.acreStrawYield);
     const bestStraw = strawCrops.length
       ? [...strawCrops].sort((a, b) => yearlyStraw(b) - yearlyStraw(a))[0]
       : null;
-    const bestEff = [...state.crops].sort((a, b) => efficiency(b) - efficiency(a))[0];
+    const bestEff = [...state.crops].sort((a, b) => (efficiency(b) ?? -1) - (efficiency(a) ?? -1))[0];
 
     const cards = [
       {
@@ -493,11 +501,11 @@
     switch (key) {
       case "crop": return c.crop.toLowerCase();
       case "monthsToGrow": return c.monthsToGrow;
-      case "yieldPerSquareAcre": return effectiveYieldPerAcre(c);
+      case "yieldPerSquareAcre": return effectiveYieldPerAcre(c) ?? -1;
       case "harvestBonusPercent": return c.harvestBonusPercent ?? -1;
       case "acreStrawYield": return c.acreStrawYield ?? -1;
       case "harvestsPerYear": return harvestsPerYear(c);
-      case "yearlyYield": return yearlyYield(c);
+      case "yearlyYield": return yearlyYield(c) ?? -1;
       case "yearlyStraw": return yearlyStraw(c);
       case "yearlyStrawPricePerAcre": return yearlyStrawPricePerAcre(c) ?? -1;
       case "lowSellPrice": return effectiveLowSellPrice(c) ?? -1;
@@ -782,6 +790,7 @@
       monthsToGrow: Number($("#f_months").value),
       maxMonthsToGrow: maxM,
       yieldPerSquareAcre: Number($("#f_yield").value),
+        yieldPerSquareAcre: $("#f_yield").value === "" ? null : Number($("#f_yield").value),
       harvestBonusPercent: $("#f_bonus").value === "" ? null : Number($("#f_bonus").value),
       acreStrawYield: $("#f_straw").value === "" ? null : Number($("#f_straw").value),
       lowSellPrice: $("#f_lowSell").value === "" ? null : Number($("#f_lowSell").value),
@@ -791,6 +800,7 @@
     });
     const usedPlayerYieldInput = state.yieldSamples.length > 0;
     const enteredYield = Number($("#f_yield").value);
+      const enteredYield = $("#f_yield").value === "" ? null : Number($("#f_yield").value);
     if (!newCrop.crop) return;
     if (original) {
       const idx = state.crops.findIndex(x => x.crop === original);
@@ -804,6 +814,7 @@
         if (usedPlayerYieldInput) {
           newCrop.playerYieldPerSquareAcre = enteredYield;
           newCrop.yieldPerSquareAcre = readNumber(prev.yieldPerSquareAcre, enteredYield) ?? enteredYield;
+                  newCrop.yieldPerSquareAcre = readNumber(prev.yieldPerSquareAcre, enteredYield);
         } else {
           newCrop.playerYieldPerSquareAcre = readNumber(prev.playerYieldPerSquareAcre);
           newCrop.yieldPerSquareAcre = enteredYield;

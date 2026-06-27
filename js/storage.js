@@ -35,7 +35,9 @@
   }
 
   function normalize(c) {
-    const baseYield = Number(c.yieldPerSquareAcre) || 0;
+    const baseYield = c.yieldPerSquareAcre == null || c.yieldPerSquareAcre === ""
+      ? null
+      : Number(c.yieldPerSquareAcre);
     const playerYield = c.playerYieldPerSquareAcre == null || c.playerYieldPerSquareAcre === ""
       ? (c.playerYieldInput ? baseYield : null)
       : Number(c.playerYieldPerSquareAcre);
@@ -43,7 +45,7 @@
     const normalized = {
       crop: String(c.crop || "Unnamed"),
       monthsToGrow: Number(c.monthsToGrow) || 1,
-      yieldPerSquareAcre: baseYield,
+      yieldPerSquareAcre: Number.isFinite(baseYield) ? baseYield : null,
       playerYieldPerSquareAcre: playerYield,
       harvestBonusPercent: c.harvestBonusPercent == null || c.harvestBonusPercent === "" ? null : Number(c.harvestBonusPercent),
       acreStrawYield: c.acreStrawYield == null || c.acreStrawYield === "" ? null : Number(c.acreStrawYield),
