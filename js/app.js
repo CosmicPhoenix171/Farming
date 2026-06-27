@@ -825,8 +825,7 @@
       crop: $("#f_crop").value.trim(),
       monthsToGrow: Number($("#f_months").value),
       maxMonthsToGrow: maxM,
-      yieldPerSquareAcre: Number($("#f_yield").value),
-        yieldPerSquareAcre: $("#f_yield").value === "" ? null : Number($("#f_yield").value),
+      yieldPerSquareAcre: $("#f_yield").value === "" ? null : Number($("#f_yield").value),
       harvestBonusPercent: $("#f_bonus").value === "" ? null : Number($("#f_bonus").value),
       acreStrawYield: $("#f_straw").value === "" ? null : Number($("#f_straw").value),
       lowSellPrice: $("#f_lowSell").value === "" ? null : Number($("#f_lowSell").value),
@@ -835,8 +834,7 @@
       notes: $("#f_notes").value.trim()
     });
     const usedPlayerYieldInput = state.yieldSamples.length > 0;
-    const enteredYield = Number($("#f_yield").value);
-      const enteredYield = $("#f_yield").value === "" ? null : Number($("#f_yield").value);
+    const enteredYield = $("#f_yield").value === "" ? null : Number($("#f_yield").value);
     if (!newCrop.crop) return;
     if (original) {
       const idx = state.crops.findIndex(x => x.crop === original);
@@ -849,8 +847,7 @@
         }
         if (usedPlayerYieldInput) {
           newCrop.playerYieldPerSquareAcre = enteredYield;
-          newCrop.yieldPerSquareAcre = readNumber(prev.yieldPerSquareAcre, enteredYield) ?? enteredYield;
-                  newCrop.yieldPerSquareAcre = readNumber(prev.yieldPerSquareAcre, enteredYield);
+          newCrop.yieldPerSquareAcre = readNumber(prev.yieldPerSquareAcre, enteredYield);
         } else {
           newCrop.playerYieldPerSquareAcre = readNumber(prev.playerYieldPerSquareAcre);
           newCrop.yieldPerSquareAcre = enteredYield;
