@@ -829,8 +829,6 @@
     $("#f_crop").value = c ? c.crop : "";
     $("#f_months").value = c ? c.monthsToGrow : "";
     $("#f_maxMonths").value = c && c.maxMonthsToGrow ? c.maxMonthsToGrow : "";
-    $("#f_yield").value = c ? c.yieldPerSquareAcre : "";
-    $("#f_straw").value = c && c.acreStrawYield != null ? c.acreStrawYield : "";
     $("#f_lowSell").value = c && c.lowSellPrice != null ? c.lowSellPrice : "";
     $("#f_highSell").value = c && c.highSellPrice != null ? c.highSellPrice : "";
     $("#f_type").value = c ? c.type : "grain";
@@ -988,7 +986,21 @@
       if (idx < 0) return;
       const crop = state.crops[idx];
       const entries = Array.isArray(crop.playerEntries) ? crop.playerEntries : [];
-      crop.playerEntries = entries.filter(en => String(en.playerName || "").toLowerCase() !== playerName.toLowerCase());
+      const remaining = entries.filter(en => String(en.playerName || "").toLowerCase() !== playerName.toLowerCase());
+      crop.playerEntries = remaining;
+      // Sync crop-level legacy fields so the deleted entry doesn't reappear via the
+      // getPlayerEntriesForCrop() fallback. If players remain, mirror the most
+      // recently updated one; otherwise clear the legacy fields outright.
+      if (remaining.length) {
+        const latest = remaining.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
+        crop.playerYieldPerSquareAcre = latest && latest.yieldPerSquareAcre != null ? Number(latest.yieldPerSquareAcre) : null;
+        crop.playerYieldInput = crop.playerYieldPerSquareAcre != null;
+        crop.harvestBonusPercent = latest && latest.harvestBonusPercent != null ? Number(latest.harvestBonusPercent) : null;
+      } else {
+        crop.playerYieldPerSquareAcre = null;
+        crop.playerYieldInput = false;
+        crop.harvestBonusPercent = null;
+      }
       state.crops[idx] = window.CropStore.normalize(crop);
       persistCrops();
       renderAll();
@@ -1004,13 +1016,13 @@
     e.preventDefault();
     const original = $("#f_originalName").value;
     const maxM = $("#f_maxMonths").value ? Number($("#f_maxMonths").value) : undefined;
-    const enteredYield = $("#f_yield").value === "" ? null : Number($("#f_yield").value);
+    const prevCrop = original ? state.crops.find(x => x.crop === original) : null;
     const newCrop = window.CropStore.normalize({
       crop: $("#f_crop").value.trim(),
       monthsToGrow: Number($("#f_months").value),
       maxMonthsToGrow: maxM,
-      yieldPerSquareAcre: enteredYield,
-      acreStrawYield: $("#f_straw").value === "" ? null : Number($("#f_straw").value),
+      yieldPerSquareAcre: prevCrop ? readNumber(prevCrop.yieldPerSquareAcre) : null,
+      acreStrawYield: prevCrop ? readNumber(prevCrop.acreStrawYield) : null,
       lowSellPrice: $("#f_lowSell").value === "" ? null : Number($("#f_lowSell").value),
       highSellPrice: $("#f_highSell").value === "" ? null : Number($("#f_highSell").value),
       type: $("#f_type").value,
