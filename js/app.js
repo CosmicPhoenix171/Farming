@@ -16,6 +16,7 @@
       strawOnly: false,
       includeStrawValue: false,
       usePlayerData: true,
+      playerInfoOnly: false,
       bestYearlyOnly: false
     },
     livePriceEntries: [],
@@ -44,6 +45,13 @@
   }
   function isUsingPlayerYield(c) {
     return state.filters.usePlayerData && playerYieldPerAcre(c) != null;
+  }
+  function hasPlayerInfo(c) {
+    return (
+      readNumber(c.playerYieldPerSquareAcre) != null ||
+      c.harvestBonusPercent != null ||
+      c.manualPriceOverrideAt != null
+    );
   }
   function harvestsPerYearMax(c) {
     // for grass-style crops, max months means fewer harvests
@@ -378,6 +386,7 @@
     $("#strawOnly").addEventListener("change", e => { state.filters.strawOnly = e.target.checked; renderTable(); });
     $("#includeStrawValue").addEventListener("change", e => { state.filters.includeStrawValue = e.target.checked; renderTable(); });
     $("#usePlayerData").addEventListener("change", e => { state.filters.usePlayerData = e.target.checked; renderAll(); });
+    $("#playerInfoOnly").addEventListener("change", e => { state.filters.playerInfoOnly = e.target.checked; renderTable(); });
     $("#bestYearlyOnly").addEventListener("change", e => { state.filters.bestYearlyOnly = e.target.checked; renderTable(); });
 
     // Chart sort
@@ -488,6 +497,9 @@
     }
     if (f.strawOnly) {
       list = list.filter(c => c.acreStrawYield);
+    }
+    if (f.playerInfoOnly) {
+      list = list.filter(hasPlayerInfo);
     }
     if (f.bestYearlyOnly) {
       const top = [...state.crops].sort((a, b) => yearlyYield(b) - yearlyYield(a)).slice(0, 8);
