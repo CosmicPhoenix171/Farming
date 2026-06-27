@@ -521,7 +521,7 @@
     });
 
     if (!list.length) {
-      tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;color:var(--muted);padding:24px">No crops match your filters.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:24px">No crops match your filters.</td></tr>`;
       return;
     }
 
@@ -536,7 +536,6 @@
           <td class="num">${harvestsLabel(c)}</td>
           <td class="num">${yearlyYieldLabel(c)}</td>
           <td class="num">${yearlyStrawLabel(c)}</td>
-          <td class="num">${yearlyStrawPricePerAcreLabel(c)}</td>
           <td class="num">${lowSellPriceLabel(c)}</td>
           <td class="num">${highSellPriceLabel(c)}</td>
           <td class="num">${pricePerAcreLabel(c)}</td>
