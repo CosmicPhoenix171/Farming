@@ -14,10 +14,13 @@
       growth: "all",
       type: "all",
       strawOnly: false,
+      includeStrawValue: false,
       bestYearlyOnly: false
     },
     livePriceEntries: [],
     lastLivePriceUpdateMs: 0,
+    liveStrawLowSellPrice: null,
+    liveStrawHighSellPrice: null,
     chartSort: "yearlyDesc",
     selectedCrop: null
   };
@@ -45,14 +48,58 @@
   function yearlyStraw(c) {
     return c.acreStrawYield ? c.acreStrawYield * harvestsPerYear(c) : 0;
   }
-  function averageSellPrice(c) {
+  function cropAverageSellPrice(c) {
     if (c.lowSellPrice != null && c.highSellPrice != null) return (c.lowSellPrice + c.highSellPrice) / 2;
     return c.highSellPrice ?? c.lowSellPrice ?? null;
   }
+  function liveStrawAverageSellPrice() {
+    if (state.liveStrawLowSellPrice != null && state.liveStrawHighSellPrice != null) {
+      return (state.liveStrawLowSellPrice + state.liveStrawHighSellPrice) / 2;
+    }
+    return state.liveStrawHighSellPrice ?? state.liveStrawLowSellPrice ?? null;
+  }
+  function includeStrawValue(c) {
+    return !!state.filters.includeStrawValue && !!c.acreStrawYield;
+  }
+  function effectiveLowSellPrice(c) {
+    const low = c.lowSellPrice;
+    if (!includeStrawValue(c)) return low ?? null;
+    const strawLow = state.liveStrawLowSellPrice;
+    if (low == null && strawLow == null) return null;
+    return (low ?? 0) + (strawLow ?? 0);
+  }
+  function effectiveHighSellPrice(c) {
+    const high = c.highSellPrice;
+    if (!includeStrawValue(c)) return high ?? null;
+    const strawHigh = state.liveStrawHighSellPrice;
+    if (high == null && strawHigh == null) return null;
+    return (high ?? 0) + (strawHigh ?? 0);
+  }
+  function averageSellPrice(c) {
+    const cropAvg = cropAverageSellPrice(c);
+    if (!includeStrawValue(c)) return cropAvg;
+    const strawAvg = liveStrawAverageSellPrice();
+    if (cropAvg == null && strawAvg == null) return null;
+    return (cropAvg ?? 0) + (strawAvg ?? 0);
+  }
+  function lowSellPriceLabel(c) {
+    const low = effectiveLowSellPrice(c);
+    return low == null ? "—" : fmt(Math.round(low));
+  }
+  function highSellPriceLabel(c) {
+    const high = effectiveHighSellPrice(c);
+    return high == null ? "—" : fmt(Math.round(high));
+  }
   function pricePerAcre(c) {
-    const avg = averageSellPrice(c);
-    if (avg == null) return null;
-    return (c.yieldPerSquareAcre / 1000) * avg;
+    const cropAvg = cropAverageSellPrice(c);
+    const cropPart = cropAvg == null ? null : (c.yieldPerSquareAcre / 1000) * cropAvg;
+
+    if (!includeStrawValue(c)) return cropPart;
+
+    const strawAvg = liveStrawAverageSellPrice();
+    const strawPart = strawAvg == null ? null : (c.acreStrawYield / 1000) * strawAvg;
+    if (cropPart == null && strawPart == null) return null;
+    return (cropPart ?? 0) + (strawPart ?? 0);
   }
   function yearlyPricePerAcre(c) {
     const one = pricePerAcre(c);
@@ -128,7 +175,11 @@
   }
 
   function applyLivePrices(entries, liveUpdatedAtMs = 0) {
-    if (!Array.isArray(entries) || !entries.length) return;
+    if (!Array.isArray(entries) || !entries.length) {
+      state.liveStrawLowSellPrice = null;
+      state.liveStrawHighSellPrice = null;
+      return;
+    }
 
     const byKey = new Map();
     state.crops.forEach((c, i) => byKey.set(normalizeKey(c.crop), i));
@@ -142,11 +193,32 @@
       longgrainrice: "ricelonggrain"
     };
 
+    state.liveStrawLowSellPrice = null;
+    state.liveStrawHighSellPrice = null;
+
     for (const e of entries) {
       const nameRaw = e.crop || e.fillTypeName || e.name || e.title || e.product || e.id;
       const keyRaw = normalizeKey(nameRaw);
       if (!keyRaw) continue;
       const key = cropAliases[keyRaw] || keyRaw;
+
+      if (key === "straw") {
+        const strawLow = readNumber(e.lowSellPrice, e.lowPrice, e.minPrice);
+        const strawHigh = readNumber(e.highSellPrice, e.highPrice, e.maxPrice);
+        const strawAvg = readNumber(e.avgPrice, e.price, e.currentPrice);
+
+        if (strawLow != null) state.liveStrawLowSellPrice = Math.round(strawLow);
+        if (strawHigh != null) state.liveStrawHighSellPrice = Math.round(strawHigh);
+        if (strawLow == null && strawHigh == null && strawAvg != null) {
+          state.liveStrawLowSellPrice = Math.round(strawAvg);
+          state.liveStrawHighSellPrice = Math.round(strawAvg);
+        } else if (strawLow != null && strawHigh == null) {
+          state.liveStrawHighSellPrice = Math.round(strawLow);
+        } else if (strawHigh != null && strawLow == null) {
+          state.liveStrawLowSellPrice = Math.round(strawHigh);
+        }
+        continue;
+      }
 
       let idx = byKey.get(key);
       if (idx == null) {
@@ -271,6 +343,7 @@
     $("#growthFilter").addEventListener("change", e => { state.filters.growth = e.target.value; renderTable(); });
     $("#typeFilter").addEventListener("change", e => { state.filters.type = e.target.value; renderTable(); });
     $("#strawOnly").addEventListener("change", e => { state.filters.strawOnly = e.target.checked; renderTable(); });
+    $("#includeStrawValue").addEventListener("change", e => { state.filters.includeStrawValue = e.target.checked; renderTable(); });
     $("#bestYearlyOnly").addEventListener("change", e => { state.filters.bestYearlyOnly = e.target.checked; renderTable(); });
 
     // Chart sort
@@ -396,8 +469,8 @@
       case "harvestsPerYear": return harvestsPerYear(c);
       case "yearlyYield": return yearlyYield(c);
       case "yearlyStraw": return yearlyStraw(c);
-      case "lowSellPrice": return c.lowSellPrice ?? -1;
-      case "highSellPrice": return c.highSellPrice ?? -1;
+      case "lowSellPrice": return effectiveLowSellPrice(c) ?? -1;
+      case "highSellPrice": return effectiveHighSellPrice(c) ?? -1;
       case "pricePerAcre": return pricePerAcre(c) ?? -1;
       case "yearlyPricePerAcre": return yearlyPricePerAcre(c) ?? -1;
       default: return 0;
@@ -447,8 +520,8 @@
           <td class="num">${harvestsLabel(c)}</td>
           <td class="num">${yearlyYieldLabel(c)}</td>
           <td class="num">${yearlyStrawLabel(c)}</td>
-          <td class="num">${fmt(c.lowSellPrice)}</td>
-          <td class="num">${fmt(c.highSellPrice)}</td>
+          <td class="num">${lowSellPriceLabel(c)}</td>
+          <td class="num">${highSellPriceLabel(c)}</td>
           <td class="num">${pricePerAcreLabel(c)}</td>
           <td class="num">${yearlyPricePerAcreLabel(c)}</td>
           <td class="notes">${escapeHtml(c.notes || "")}</td>
