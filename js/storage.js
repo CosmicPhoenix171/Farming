@@ -42,6 +42,17 @@
       ? (c.playerYieldInput ? baseYield : null)
       : Number(c.playerYieldPerSquareAcre);
 
+    const playerEntries = Array.isArray(c.playerEntries)
+      ? c.playerEntries
+          .map((e) => ({
+            playerName: String((e && e.playerName) || "Unknown Player"),
+            yieldPerSquareAcre: e && (e.yieldPerSquareAcre == null || e.yieldPerSquareAcre === "") ? null : Number(e && e.yieldPerSquareAcre),
+            harvestBonusPercent: e && (e.harvestBonusPercent == null || e.harvestBonusPercent === "") ? null : Number(e && e.harvestBonusPercent),
+            updatedAt: e && Number(e.updatedAt) ? Number(e.updatedAt) : Date.now()
+          }))
+          .filter((e) => Number.isFinite(e.yieldPerSquareAcre) || Number.isFinite(e.harvestBonusPercent))
+      : [];
+
     const normalized = {
       crop: String(c.crop || "Unnamed"),
       monthsToGrow: Number(c.monthsToGrow) || 1,
@@ -54,6 +65,7 @@
       highSellPrice: c.highSellPrice == null || c.highSellPrice === "" ? null : Number(c.highSellPrice),
       manualPriceOverrideAt: c.manualPriceOverrideAt == null || c.manualPriceOverrideAt === "" ? null : Number(c.manualPriceOverrideAt),
       playerYieldInput: playerYield != null,
+      playerEntries,
       type: c.type || "other",
       notes: c.notes || "",
       // future-ready fields preserved if present

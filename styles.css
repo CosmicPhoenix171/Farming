@@ -293,6 +293,51 @@ input[type="checkbox"] { accent-color: var(--green); }
 }
 .tag.yellow { background: var(--yellow-soft); color: var(--yellow); }
 
+.player-data-panel {
+  margin-top: 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+.player-data-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.player-data-header h3 {
+  font-size: 16px;
+  color: var(--green);
+}
+.player-data-meta {
+  margin: 6px 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.player-data-list {
+  display: grid;
+  gap: 8px;
+}
+.player-data-item {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+}
+.player-data-item .player-name {
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.player-data-item .player-values {
+  color: var(--muted);
+  font-size: 12px;
+  display: grid;
+  gap: 2px;
+}
+
 /* -------------------- Chart -------------------- */
 .chart-wrap {
   background: var(--panel);

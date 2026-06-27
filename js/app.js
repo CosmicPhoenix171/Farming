@@ -373,6 +373,7 @@
 
   function renderAll() {
     renderTable();
+    renderPlayerDataPanel();
     renderChart();
     renderTimeline();
   }
@@ -415,6 +416,9 @@
 
     // Actions
     $("#addCropBtn").addEventListener("click", () => openModal(null));
+    $("#editSelectedCropBtn").addEventListener("click", () => {
+      if (state.selectedCrop) openModal(state.selectedCrop);
+    });
 
     // Modal
     $("#closeModal").addEventListener("click", closeModal);
@@ -586,7 +590,7 @@
 
     tbody.innerHTML = list.map((c, i) => {
       return `
-        <tr data-crop="${escapeAttr(c.crop)}">
+        <tr data-crop="${escapeAttr(c.crop)}" class="${state.selectedCrop === c.crop ? "selected" : ""}">
           <td class="num">${i + 1}</td>
           <td>${escapeHtml(c.crop)}${c.acreStrawYield ? '<span class="tag yellow">straw</span>' : ""}</td>
           <td class="num">${monthsLabel(c)}</td>
@@ -605,10 +609,80 @@
       `;
     }).join("");
 
-    // row click → edit
+    // row click → select and open player panel
     tbody.querySelectorAll("tr[data-crop]").forEach(tr => {
-      tr.addEventListener("click", () => openModal(tr.dataset.crop));
+      tr.addEventListener("click", () => {
+        state.selectedCrop = tr.dataset.crop;
+        renderTable();
+        renderPlayerDataPanel();
+      });
+      tr.addEventListener("dblclick", () => openModal(tr.dataset.crop));
     });
+  }
+
+  function getPlayerEntriesForCrop(crop) {
+    const explicit = Array.isArray(crop.playerEntries) ? crop.playerEntries : [];
+    if (explicit.length) return explicit;
+
+    const legacyYield = readNumber(crop.playerYieldPerSquareAcre);
+    const legacyBonus = readNumber(crop.harvestBonusPercent);
+    if (legacyYield == null && legacyBonus == null) return [];
+
+    return [{
+      playerName: "Unknown Player",
+      yieldPerSquareAcre: legacyYield,
+      harvestBonusPercent: legacyBonus,
+      updatedAt: Date.now()
+    }];
+  }
+
+  function renderPlayerDataPanel() {
+    const panel = $("#playerDataPanel");
+    const title = $("#playerDataTitle");
+    const meta = $("#playerDataMeta");
+    const list = $("#playerDataList");
+
+    if (!panel || !title || !meta || !list) return;
+
+    if (!state.selectedCrop) {
+      panel.hidden = true;
+      return;
+    }
+
+    const crop = state.crops.find(c => c.crop === state.selectedCrop);
+    if (!crop) {
+      panel.hidden = true;
+      return;
+    }
+
+    const entries = getPlayerEntriesForCrop(crop);
+    panel.hidden = false;
+    title.textContent = `${crop.crop} - Player Data`;
+    meta.textContent = entries.length
+      ? `${entries.length} player ${entries.length === 1 ? "entry" : "entries"}`
+      : "No player entries yet. Add player name + values in Edit Crop.";
+
+    if (!entries.length) {
+      list.innerHTML = "";
+      return;
+    }
+
+    list.innerHTML = entries.map((entry) => {
+      const bonus = entry.harvestBonusPercent == null
+        ? "-"
+        : `${Number(entry.harvestBonusPercent).toLocaleString(undefined, { maximumFractionDigits: 1 })}%`;
+      const updated = entry.updatedAt ? new Date(entry.updatedAt).toLocaleString() : "Unknown";
+      return `
+        <article class="player-data-item">
+          <div class="player-name">${escapeHtml(entry.playerName || "Unknown Player")}</div>
+          <div class="player-values">
+            <div>Yield / Acre: ${fmt(entry.yieldPerSquareAcre)}</div>
+            <div>Harvest Bonus: ${escapeHtml(bonus)}</div>
+            <div>Updated: ${escapeHtml(updated)}</div>
+          </div>
+        </article>
+      `;
+    }).join("");
   }
 
   // ---------- Chart (SVG bar chart) ----------
@@ -743,6 +817,7 @@
     $("#f_maxMonths").value = c && c.maxMonthsToGrow ? c.maxMonthsToGrow : "";
     $("#f_yield").value = c ? c.yieldPerSquareAcre : "";
     $("#f_bonus").value = c && c.harvestBonusPercent != null ? c.harvestBonusPercent : "";
+    $("#f_playerName").value = "";
     $("#f_straw").value = c && c.acreStrawYield != null ? c.acreStrawYield : "";
     $("#f_lowSell").value = c && c.lowSellPrice != null ? c.lowSellPrice : "";
     $("#f_highSell").value = c && c.highSellPrice != null ? c.highSellPrice : "";
@@ -835,6 +910,8 @@
     });
     const usedPlayerYieldInput = state.yieldSamples.length > 0;
     const enteredYield = $("#f_yield").value === "" ? null : Number($("#f_yield").value);
+    const enteredBonus = $("#f_bonus").value === "" ? null : Number($("#f_bonus").value);
+    const playerName = $("#f_playerName").value.trim();
     if (!newCrop.crop) return;
     if (original) {
       const idx = state.crops.findIndex(x => x.crop === original);
@@ -852,6 +929,24 @@
           newCrop.playerYieldPerSquareAcre = readNumber(prev.playerYieldPerSquareAcre);
           newCrop.yieldPerSquareAcre = enteredYield;
         }
+
+        if (playerName && (enteredYield != null || enteredBonus != null)) {
+          const prevEntries = Array.isArray(prev.playerEntries) ? prev.playerEntries.slice() : [];
+          const key = playerName.toLowerCase();
+          const existingIdx = prevEntries.findIndex(e => String(e.playerName || "").toLowerCase() === key);
+          const nextEntry = {
+            playerName,
+            yieldPerSquareAcre: enteredYield,
+            harvestBonusPercent: enteredBonus,
+            updatedAt: Date.now()
+          };
+          if (existingIdx >= 0) prevEntries[existingIdx] = nextEntry;
+          else prevEntries.push(nextEntry);
+          newCrop.playerEntries = prevEntries;
+        } else {
+          newCrop.playerEntries = Array.isArray(prev.playerEntries) ? prev.playerEntries : [];
+        }
+
         newCrop.playerYieldInput = newCrop.playerYieldPerSquareAcre != null;
         state.crops[idx] = newCrop;
       }
@@ -864,9 +959,18 @@
         newCrop.manualPriceOverrideAt = Date.now();
       }
       newCrop.playerYieldPerSquareAcre = usedPlayerYieldInput ? enteredYield : null;
+      newCrop.playerEntries = playerName && (enteredYield != null || enteredBonus != null)
+        ? [{
+            playerName,
+            yieldPerSquareAcre: enteredYield,
+            harvestBonusPercent: enteredBonus,
+            updatedAt: Date.now()
+          }]
+        : [];
       newCrop.playerYieldInput = newCrop.playerYieldPerSquareAcre != null;
       state.crops.push(newCrop);
     }
+    state.selectedCrop = newCrop.crop;
     persistCrops();
     populateTypeFilter();
     closeModal();
