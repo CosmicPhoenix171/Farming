@@ -19,8 +19,6 @@
     },
     livePriceEntries: [],
     lastLivePriceUpdateMs: 0,
-    liveStrawLowSellPrice: null,
-    liveStrawHighSellPrice: null,
     chartSort: "yearlyDesc",
     selectedCrop: null
   };
@@ -52,11 +50,21 @@
     if (c.lowSellPrice != null && c.highSellPrice != null) return (c.lowSellPrice + c.highSellPrice) / 2;
     return c.highSellPrice ?? c.lowSellPrice ?? null;
   }
-  function liveStrawAverageSellPrice() {
-    if (state.liveStrawLowSellPrice != null && state.liveStrawHighSellPrice != null) {
-      return (state.liveStrawLowSellPrice + state.liveStrawHighSellPrice) / 2;
+  const DEFAULT_STRAW_LOW_SELL_PRICE = 33;
+  const DEFAULT_STRAW_HIGH_SELL_PRICE = 50;
+  function manualStrawPriceRange() {
+    const strawCrop = state.crops.find(c => normalizeKey(c.crop) === "straw");
+    if (!strawCrop || !strawCrop.manualPriceOverrideAt) {
+      return {
+        low: DEFAULT_STRAW_LOW_SELL_PRICE,
+        high: DEFAULT_STRAW_HIGH_SELL_PRICE,
+        avg: (DEFAULT_STRAW_LOW_SELL_PRICE + DEFAULT_STRAW_HIGH_SELL_PRICE) / 2
+      };
     }
-    return state.liveStrawHighSellPrice ?? state.liveStrawLowSellPrice ?? null;
+    const low = readNumber(strawCrop.lowSellPrice);
+    const high = readNumber(strawCrop.highSellPrice);
+    const avg = low != null && high != null ? (low + high) / 2 : (high ?? low ?? null);
+    return { low, high, avg };
   }
   function includeStrawValue(c) {
     return !!state.filters.includeStrawValue && !!c.acreStrawYield;
@@ -64,21 +72,21 @@
   function effectiveLowSellPrice(c) {
     const low = c.lowSellPrice;
     if (!includeStrawValue(c)) return low ?? null;
-    const strawLow = state.liveStrawLowSellPrice;
+    const strawLow = manualStrawPriceRange().low;
     if (low == null && strawLow == null) return null;
     return (low ?? 0) + (strawLow ?? 0);
   }
   function effectiveHighSellPrice(c) {
     const high = c.highSellPrice;
     if (!includeStrawValue(c)) return high ?? null;
-    const strawHigh = state.liveStrawHighSellPrice;
+    const strawHigh = manualStrawPriceRange().high;
     if (high == null && strawHigh == null) return null;
     return (high ?? 0) + (strawHigh ?? 0);
   }
   function averageSellPrice(c) {
     const cropAvg = cropAverageSellPrice(c);
     if (!includeStrawValue(c)) return cropAvg;
-    const strawAvg = liveStrawAverageSellPrice();
+    const strawAvg = manualStrawPriceRange().avg;
     if (cropAvg == null && strawAvg == null) return null;
     return (cropAvg ?? 0) + (strawAvg ?? 0);
   }
@@ -96,7 +104,7 @@
 
     if (!includeStrawValue(c)) return cropPart;
 
-    const strawAvg = liveStrawAverageSellPrice();
+    const strawAvg = manualStrawPriceRange().avg;
     const strawPart = strawAvg == null ? null : (c.acreStrawYield / 1000) * strawAvg;
     if (cropPart == null && strawPart == null) return null;
     return (cropPart ?? 0) + (strawPart ?? 0);
@@ -175,11 +183,7 @@
   }
 
   function applyLivePrices(entries, liveUpdatedAtMs = 0) {
-    if (!Array.isArray(entries) || !entries.length) {
-      state.liveStrawLowSellPrice = null;
-      state.liveStrawHighSellPrice = null;
-      return;
-    }
+    if (!Array.isArray(entries) || !entries.length) return;
 
     const byKey = new Map();
     state.crops.forEach((c, i) => byKey.set(normalizeKey(c.crop), i));
@@ -193,9 +197,6 @@
       longgrainrice: "ricelonggrain"
     };
 
-    state.liveStrawLowSellPrice = null;
-    state.liveStrawHighSellPrice = null;
-
     for (const e of entries) {
       const nameRaw = e.crop || e.fillTypeName || e.name || e.title || e.product || e.id;
       const keyRaw = normalizeKey(nameRaw);
@@ -207,20 +208,9 @@
       const avg = readNumber(e.avgPrice, e.price, e.currentPrice);
 
       if (key === "straw" || key.includes("straw")) {
-        const strawLow = low;
-        const strawHigh = high;
-        const strawAvg = avg;
-
-        if (strawLow != null) state.liveStrawLowSellPrice = Math.round(strawLow);
-        if (strawHigh != null) state.liveStrawHighSellPrice = Math.round(strawHigh);
-        if (strawLow == null && strawHigh == null && strawAvg != null) {
-          state.liveStrawLowSellPrice = Math.round(strawAvg);
-          state.liveStrawHighSellPrice = Math.round(strawAvg);
-        } else if (strawLow != null && strawHigh == null) {
-          state.liveStrawHighSellPrice = Math.round(strawLow);
-        } else if (strawHigh != null && strawLow == null) {
-          state.liveStrawLowSellPrice = Math.round(strawHigh);
-        }
+        // Straw add-on uses the manually entered Straw crop price only.
+        // Ignore Firebase Straw entries so manual Straw input stays authoritative.
+        continue;
       }
 
       let idx = byKey.get(key);
@@ -248,19 +238,6 @@
       }
     }
 
-    // Fallback: if Firebase updated a Straw crop row but no dedicated straw live entry was detected,
-    // use the Straw crop's current low/high as the straw component for include-straw calculations.
-    if (state.liveStrawLowSellPrice == null && state.liveStrawHighSellPrice == null) {
-      const strawCrop = state.crops.find(c => normalizeKey(c.crop) === "straw");
-      if (strawCrop) {
-        const low = readNumber(strawCrop.lowSellPrice);
-        const high = readNumber(strawCrop.highSellPrice);
-        if (low != null || high != null) {
-          state.liveStrawLowSellPrice = low != null ? Math.round(low) : Math.round(high);
-          state.liveStrawHighSellPrice = high != null ? Math.round(high) : Math.round(low);
-        }
-      }
-    }
   }
 
   function useCase(c) {
