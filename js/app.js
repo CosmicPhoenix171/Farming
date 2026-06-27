@@ -23,7 +23,8 @@
     lastLivePriceUpdateMs: 0,
     yieldSamples: [],
     chartSort: "yearlyDesc",
-    selectedCrop: null
+    selectedCrop: null,
+    cropActionTarget: null
   };
 
   // ---------- Helpers ----------
@@ -437,12 +438,26 @@
     $("#playerEntryForm").addEventListener("submit", onSubmitPlayerEntry);
     $("#playerDataList").addEventListener("click", onPlayerDataListClick);
 
+    // Crop Action Chooser Modal
+    $("#closeCropActionModal").addEventListener("click", closeCropActionModal);
+    $("#cropActionCancel").addEventListener("click", closeCropActionModal);
+    $("#cropActionEditCrop").addEventListener("click", () => {
+      const cropName = state.cropActionTarget || state.selectedCrop;
+      closeCropActionModal();
+      if (cropName) openModal(cropName);
+    });
+    $("#cropActionAddPlayer").addEventListener("click", () => {
+      const cropName = state.cropActionTarget || state.selectedCrop;
+      closeCropActionModal();
+      if (cropName) openPlayerEntryModal(cropName);
+    });
+
     // Overlay
-    $("#overlay").addEventListener("click", () => { closeModal(); closePlayerEntryModal(); });
+    $("#overlay").addEventListener("click", () => { closeModal(); closePlayerEntryModal(); closeCropActionModal(); });
 
     // Esc key
     document.addEventListener("keydown", e => {
-      if (e.key === "Escape") { closeModal(); closePlayerEntryModal(); }
+      if (e.key === "Escape") { closeModal(); closePlayerEntryModal(); closeCropActionModal(); }
     });
   }
 
@@ -618,12 +633,13 @@
       `;
     }).join("");
 
-    // row click → select and open player panel
+    // row click → select, open player panel, and show action chooser
     tbody.querySelectorAll("tr[data-crop]").forEach(tr => {
       tr.addEventListener("click", () => {
         state.selectedCrop = tr.dataset.crop;
         renderTable();
         renderPlayerDataPanel();
+        openCropActionModal(tr.dataset.crop);
       });
       tr.addEventListener("dblclick", () => openModal(tr.dataset.crop));
     });
@@ -866,7 +882,7 @@
 
   function closePlayerEntryModal() {
     $("#playerEntryModal").hidden = true;
-    if ($("#editModal").hidden) $("#overlay").hidden = true;
+    if ($("#editModal").hidden && $("#cropActionModal").hidden) $("#overlay").hidden = true;
   }
 
   function renderYieldSamples() {
@@ -1009,7 +1025,22 @@
 
   function closeModal() {
     $("#editModal").hidden = true;
-    $("#overlay").hidden = true;
+    if ($("#playerEntryModal").hidden && $("#cropActionModal").hidden) $("#overlay").hidden = true;
+  }
+
+  // ---------- Crop Action Chooser ----------
+  function openCropActionModal(cropName) {
+    if (!cropName) return;
+    state.cropActionTarget = cropName;
+    $("#cropActionTitle").textContent = `${cropName} - Choose an Action`;
+    $("#cropActionModal").hidden = false;
+    $("#overlay").hidden = false;
+  }
+
+  function closeCropActionModal() {
+    $("#cropActionModal").hidden = true;
+    state.cropActionTarget = null;
+    if ($("#editModal").hidden && $("#playerEntryModal").hidden) $("#overlay").hidden = true;
   }
 
   function onSubmitForm(e) {
