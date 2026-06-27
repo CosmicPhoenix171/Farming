@@ -311,6 +311,11 @@ input[type="checkbox"] { accent-color: var(--green); }
   font-size: 16px;
   color: var(--green);
 }
+.player-data-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .player-data-meta {
   margin: 6px 0 10px;
   color: var(--muted);
@@ -325,17 +330,28 @@ input[type="checkbox"] { accent-color: var(--green); }
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 .player-data-item .player-name {
   color: var(--text);
   font-weight: 600;
-  margin-bottom: 4px;
 }
 .player-data-item .player-values {
   color: var(--muted);
   font-size: 12px;
   display: grid;
   gap: 2px;
+}
+.player-data-item .player-entry-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.player-data-item .player-entry-actions .btn {
+  padding: 4px 10px;
+  font-size: 11px;
 }
 
 /* -------------------- Chart -------------------- */
