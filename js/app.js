@@ -527,7 +527,7 @@
           <td class="num">${i + 1}</td>
           <td>${escapeHtml(c.crop)}${c.acreStrawYield ? '<span class="tag yellow">straw</span>' : ""}</td>
           <td class="num">${monthsLabel(c)}</td>
-          <td class="num">${fmt(c.yieldPerSquareAcre)}</td>
+          <td class="num${c.playerYieldInput ? " player-yield" : ""}">${fmt(c.yieldPerSquareAcre)}</td>
           <td class="num">${fmt(c.acreStrawYield)}</td>
           <td class="num">${harvestsLabel(c)}</td>
           <td class="num">${yearlyYieldLabel(c)}</td>
@@ -767,6 +767,7 @@
       type: $("#f_type").value,
       notes: $("#f_notes").value.trim()
     });
+    const usedPlayerYieldInput = state.yieldSamples.length > 0;
     if (!newCrop.crop) return;
     if (original) {
       const idx = state.crops.findIndex(x => x.crop === original);
@@ -777,6 +778,7 @@
         } else {
           newCrop.manualPriceOverrideAt = prev.manualPriceOverrideAt ?? null;
         }
+        newCrop.playerYieldInput = usedPlayerYieldInput ? true : !!prev.playerYieldInput;
         state.crops[idx] = newCrop;
       }
     } else {
@@ -787,6 +789,7 @@
       if (newCrop.lowSellPrice != null || newCrop.highSellPrice != null) {
         newCrop.manualPriceOverrideAt = Date.now();
       }
+      newCrop.playerYieldInput = usedPlayerYieldInput;
       state.crops.push(newCrop);
     }
     persistCrops();

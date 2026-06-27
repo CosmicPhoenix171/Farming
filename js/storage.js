@@ -44,6 +44,7 @@
       lowSellPrice: c.lowSellPrice == null || c.lowSellPrice === "" ? null : Number(c.lowSellPrice),
       highSellPrice: c.highSellPrice == null || c.highSellPrice === "" ? null : Number(c.highSellPrice),
       manualPriceOverrideAt: c.manualPriceOverrideAt == null || c.manualPriceOverrideAt === "" ? null : Number(c.manualPriceOverrideAt),
+      playerYieldInput: !!c.playerYieldInput,
       type: c.type || "other",
       notes: c.notes || "",
       // future-ready fields preserved if present

@@ -269,6 +269,10 @@ input[type="checkbox"] { accent-color: var(--green); }
 .crop-table tbody tr:hover { background: var(--panel-2); }
 .crop-table tbody tr.selected { background: var(--green-soft); }
 .crop-table td.num { font-variant-numeric: tabular-nums; }
+.crop-table td.player-yield {
+  color: #58a6ff;
+  font-weight: 700;
+}
 .crop-table td.notes { color: var(--muted); font-size: 12px; white-space: normal; }
 .crop-table th:last-child,
 .crop-table td.notes {
