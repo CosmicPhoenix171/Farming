@@ -19,6 +19,7 @@
     },
     livePriceEntries: [],
     lastLivePriceUpdateMs: 0,
+    yieldSamples: [],
     chartSort: "yearlyDesc",
     selectedCrop: null
   };
@@ -370,6 +371,9 @@
     // Modal
     $("#closeModal").addEventListener("click", closeModal);
     $("#cancelEdit").addEventListener("click", closeModal);
+    $("#calcYieldBtn").addEventListener("click", calculateYieldFromHelper);
+    $("#clearYieldSamplesBtn").addEventListener("click", clearYieldSamples);
+    $("#yieldSampleList").addEventListener("click", onYieldSampleListClick);
     $("#cropForm").addEventListener("submit", onSubmitForm);
 
     // Overlay
@@ -687,9 +691,68 @@
     $("#f_highSell").value = c && c.highSellPrice != null ? c.highSellPrice : "";
     $("#f_type").value = c ? c.type : "grain";
     $("#f_notes").value = c ? c.notes : "";
+    $("#f_calcAcres").value = "";
+    $("#f_calcHarvested").value = "";
+    state.yieldSamples = [];
+    renderYieldSamples();
     $("#editModal").hidden = false;
     $("#overlay").hidden = false;
     $("#f_crop").focus();
+  }
+
+  function renderYieldSamples() {
+    const listEl = $("#yieldSampleList");
+    const resultEl = $("#yieldCalcResult");
+    const samples = state.yieldSamples;
+
+    if (!samples.length) {
+      listEl.innerHTML = "";
+      resultEl.textContent = "No samples yet.";
+      return;
+    }
+
+    const avg = samples.reduce((sum, s) => sum + s.yieldPerAcre, 0) / samples.length;
+    const roundedAvg = Math.round(avg);
+    $("#f_yield").value = String(roundedAvg);
+    resultEl.textContent = `Average yield / acre set to ${fmt(roundedAvg)} from ${samples.length} sample${samples.length === 1 ? "" : "s"}.`;
+
+    listEl.innerHTML = samples.map((s, i) => `
+      <div class="yield-sample-item">
+        <span class="sample-values">#${i + 1} · Acres: ${fmt(s.acres)} · Harvested: ${fmt(s.harvested)} · Yield/Acre: ${fmt(s.yieldPerAcre)}</span>
+        <button type="button" class="btn delete-sample-btn" data-delete-sample="${i}">Delete</button>
+      </div>
+    `).join("");
+  }
+
+  function calculateYieldFromHelper() {
+    const acres = Number($("#f_calcAcres").value);
+    const harvested = Number($("#f_calcHarvested").value);
+    const resultEl = $("#yieldCalcResult");
+
+    if (!Number.isFinite(acres) || acres <= 0 || !Number.isFinite(harvested) || harvested < 0) {
+      resultEl.textContent = "Enter valid Acres and Harvested values.";
+      return;
+    }
+
+    const yieldPerAcre = Math.round(harvested / acres);
+    state.yieldSamples.push({ acres, harvested, yieldPerAcre });
+    $("#f_calcAcres").value = "";
+    $("#f_calcHarvested").value = "";
+    renderYieldSamples();
+  }
+
+  function clearYieldSamples() {
+    state.yieldSamples = [];
+    renderYieldSamples();
+  }
+
+  function onYieldSampleListClick(e) {
+    const btn = e.target.closest("button[data-delete-sample]");
+    if (!btn) return;
+    const idx = Number(btn.getAttribute("data-delete-sample"));
+    if (!Number.isInteger(idx) || idx < 0 || idx >= state.yieldSamples.length) return;
+    state.yieldSamples.splice(idx, 1);
+    renderYieldSamples();
   }
 
   function closeModal() {
